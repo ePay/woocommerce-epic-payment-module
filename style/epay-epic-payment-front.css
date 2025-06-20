@@ -1,0 +1,14 @@
+.epay-card-icon {
+    display: inline-block;
+    margin-right:5px;
+}
+
+.blocks-woocommerce-epay-epic-inner {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+}
+
+.blocks-woocommerce-epay-epic-inner__icons {
+    margin-left: auto;
+}

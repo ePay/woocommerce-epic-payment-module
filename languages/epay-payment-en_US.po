@@ -1,0 +1,176 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: ePay Payment Solutions\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2019-12-06 13:34+0000\n"
+"PO-Revision-Date: 2024-02-29 11:42+0100\n"
+"Last-Translator: admin <mads@epay.dk>\n"
+"Language-Team: English (United States)\n"
+"Language: en_US\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=n != 1;\n"
+"X-Generator: Poedit 3.4.2\n"
+"X-Loco-Version: 2.3.1; wp-5.3\n"
+
+#, php-format
+msgid "The Capture action was a success for order %s"
+msgstr "The Capture action was a success for order %s"
+
+#, php-format
+msgid ""
+"ePay Payment Solutions Subscription could not be authorized for renewal order # "
+"%s - %s"
+msgstr ""
+"ePay Payment Solutions Subscription could not be authorized for renewal order # "
+"%s - %s"
+
+msgid "ePay Payment Solutions Subscription id was not found"
+msgstr "ePay Payment Solutions Subscription id was not found"
+
+#, php-format
+msgid ""
+"ePay Payment Solutions Subscription was authorized for renewal order %s with "
+"transaction id %s"
+msgstr ""
+"ePay Payment Solutions Subscription was authorized for renewal order %s with "
+"transaction id %s"
+
+#, php-format
+msgid "ePay Payment Solutions Subscription could not be canceled - %s"
+msgstr "ePay Payment Solutions Subscription could not be canceled - %s"
+
+msgid "ePay Payment Solutions Subscription ID was not found"
+msgstr "ePay Payment Solutions Subscription ID was not found"
+
+#, php-format
+msgid ""
+"Subscription successfully Canceled. - ePay Payment Solutions Subscription Id: %s"
+msgstr ""
+"Subscription successfully Canceled. - ePay Payment Solutions Subscription Id: %s"
+
+#, php-format
+msgid "ePay Payment Solutions Subscription Id: %s"
+msgstr "ePay Payment Solutions Subscription Id: %s"
+
+#, php-format
+msgid "ePay Payment completed with transaction id %s"
+msgstr "ePay Payment completed with transaction id %s"
+
+#, php-format
+msgid "ePay Payment Subscription changed from: %s to: %s"
+msgstr "ePay Payment Subscription changed from: %s to: %s"
+
+#, php-format
+msgid "ePay Payment Subscription activated with subscription id: %s"
+msgstr "ePay Payment Solutions Subscription activated with subscription id: %s"
+
+msgid "Surcharge Fee"
+msgstr "Surcharge Fee"
+
+#, php-format
+msgid ""
+"ePay Payment Solutions Subscription activated with subscription id: %s by order "
+"%s"
+msgstr ""
+"ePay Payment Solutions Subscription activated with subscription id: %s by order "
+"%s"
+
+#, php-format
+msgid "The %s action was a success for order %s"
+msgstr "The %s action was a success for order %s"
+
+#, php-format
+msgid "Capture action failed for order %s"
+msgstr "Capture action failed for order %s"
+
+#, php-format
+msgid "Refund action failed for order %s"
+msgstr "Refund action failed for order %s"
+
+#, php-format
+msgid "Delete action failed for order %s"
+msgstr "Delete action failed for order %s"
+
+#, php-format
+msgid "No transaction was found for order %s"
+msgstr "No transaction was found for order %s"
+
+#, php-format
+msgid "The order with id %s could not be loaded"
+msgstr "The order with id %s could not be loaded"
+
+msgid "Get Transaction action failed"
+msgstr "Get Transaction action failed"
+
+msgid "Transaction ID"
+msgstr "Transaction ID"
+
+msgid "Payment Type"
+msgstr "Payment Type"
+
+msgid "Authorized:"
+msgstr "Authorized:"
+
+msgid "Captured:"
+msgstr "Captured:"
+
+msgid "Refunded:"
+msgstr "Refunded:"
+
+msgid "Are you sure you want to capture the payment?"
+msgstr "Are you sure you want to capture the payment?"
+
+msgid "Capture"
+msgstr "Capture"
+
+msgid "Are you sure you want to delete the payment?"
+msgstr "Are you sure you want to delete the payment?"
+
+msgid "Delete"
+msgstr "Delete"
+
+msgid "Are you sure you want to refund the payment?"
+msgstr "Are you sure you want to refund the payment?"
+
+msgid "Refund"
+msgstr "Refund"
+
+msgid "The amount you entered was in the wrong format."
+msgstr "The amount you entered was in the wrong format."
+
+msgid "Warning"
+msgstr "Warning"
+
+msgid "Correct format is: 1234.56"
+msgstr "Correct format is: 1234.56"
+
+msgid "TRANSACTION HISTORY"
+msgstr "TRANSACTION HISTORY"
+
+#, php-format
+msgid "By: %s"
+msgstr "By: %s"
+
+msgid "Thank you for using ePay Payment Solutions."
+msgstr "Thank you for using ePay Payment Solutions."
+
+msgid "Please wait..."
+msgstr "Please wait..."
+
+#. Name of the plugin
+msgid "ePay Payment Solutions"
+msgstr "ePay Payment Solutions"
+
+#. Description of the plugin
+msgid "ePay Payment Solutions payment gateway for WooCommerce"
+msgstr "ePay Payment Solutions payment gateway for WooCommerce"
+
+#. URI of the plugin
+msgid "https://www.epay.dk"
+msgstr "https://www.epay.dk"
+
+#. Author URI of the plugin
+msgid "https://www.epay.dk/epay-payment-solutions"
+msgstr "https://www.epay.dk/epay-payment-solutions"
