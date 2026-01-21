@@ -12,7 +12,7 @@
  * @copyright ePay Payment Solutions (https://epay.dk)
  * @license   ePay Payment Solutions
  */
-class Epay_EPIC_Payment_Helper {
+class EpayPaymentHelper {
 	const ROUND_UP = "round_up";
 	const ROUND_DOWN = "round_down";
 	const ROUND_DEFAULT = "round_default";
@@ -44,10 +44,10 @@ class Epay_EPIC_Payment_Helper {
 	public static function get_module_header_info() {
 		global $woocommerce;
 
-		$epay_version        = EPAYEPIC_VERSION;
+		$epay_plugin_version = EPAY_PLUGIN_VERSION;
 		$woocommerce_version = $woocommerce->version;
 		$php_version         = phpversion();
-		$result              = "WooCommerce/{$woocommerce_version} Module/{$epay_version} PHP/{$php_version}";
+		$result              = "WooCommerce/{$woocommerce_version} Module/{$epay_plugin_version} PHP/{$php_version}";
 
 		return $result;
 	}
@@ -252,7 +252,7 @@ class Epay_EPIC_Payment_Helper {
 	 *
 	 * @throws WC_Data_Exception
 	 */
-	public static function get_epay_payment_transaction_id( $order ) {
+	public static function getEpayPaymentTransactionId($order ) {
 		$transaction_id = $order->get_transaction_id();
 		//For Legacy
 		if ( empty( $transaction_id ) ) {
@@ -279,38 +279,29 @@ class Epay_EPIC_Payment_Helper {
 	 *
 	 * @param WC_Order $order
 	 */
-	public static function get_epay_payment_callback_url( $order_id ) {
-		$args = array(
-			'wc-api'    => 'Epay_EPIC_Payment',
-			'wcorderid' => $order_id
-		);
-
-		return add_query_arg( $args, site_url( '/' ) );
-	}
+    public static function get_epay_payment_callback_url() {
+        return WC()->api_request_url( 'EpayPayment' );
+    }
 
 	/**
 	 * Returns the Accept url
 	 *
 	 * @param WC_Order $order
 	 */
-	public static function get_accept_url( $order ) {
+	public static function get_accept_url( WC_Order $order ) {
 		if ( method_exists( $order, 'get_checkout_order_received_url' ) ) {
-			$acceptUrlRaw  = $order->get_checkout_order_received_url();
-			$acceptUrlTemp = str_replace( '&amp;', '&', $acceptUrlRaw );
-			$acceptUrl     = str_replace( '&#038', '&', $acceptUrlTemp );
+            $url = $order->get_checkout_order_received_url();
 
-			return $acceptUrl;
+            return wp_specialchars_decode( $url );
 		}
 
-		return add_query_arg(
-			'key',
-			$order->order_key,
-			add_query_arg(
-				'order',
-				$order->get_id(),
-				get_permalink( get_option( 'woocommerce_thanks_page_id' ) )
-			)
-		);
+        return add_query_arg(
+            [
+                'order' => $order->get_id(),
+                'key'   => $order->get_order_key(),
+            ],
+            get_permalink( get_option( 'woocommerce_thanks_page_id' ) )
+        );
 	}
 
 	/**
@@ -343,35 +334,6 @@ class Epay_EPIC_Payment_Helper {
             );
         }
 	}
-
-	/**
-	 * Create the ePay payment html
-	 *
-	 * @param mixed $json_data
-	 *
-	 * @return string
-	 */
-    /*
-	public static function create_epay_payment_payment_html( $json_data, $apikey, $posid ) {
-
-        $html = '<section>';
-        $html .= '<!-- <p>' . __( 'Please wait...', 'epay-payment' ) . '</p> -->';
-
-        $epay_epic_payment_api = new epay_epic_payment_api($apikey, $posid);
-        $request = $epay_epic_payment_api->createPaymentRequest($json_data);
-        $request_data = json_decode($request);
-
-        $paymentWindowUrl = $request_data->paymentWindowUrl;
-
-        $html .= '<script>';
-        $html .= 'window.location.href = "'.$paymentWindowUrl.'";';
-        $html .= '</script>';
-
-        $html .= '</section>';
-
-		return $html;
-    }
-     */
 
 	/**
 	 * Validate Callback
@@ -417,10 +379,10 @@ class Epay_EPIC_Payment_Helper {
 			return false;
 		}
 		if ( class_exists( 'sitepress' ) ) {
-			$order_language = Epay_EPIC_Payment_Helper::getWPMLOrderLanguage(
+			$order_language = EpayPaymentHelper::getWPMLOrderLanguage(
 				$order
 			);
-			$md5_key        = Epay_EPIC_Payment_Helper::getWPMLOptionValue(
+			$md5_key        = EpayPaymentHelper::getWPMLOptionValue(
 				'md5key',
 				$order_language,
 				$md5_key
@@ -472,6 +434,7 @@ class Epay_EPIC_Payment_Helper {
 		$default_value = null
 	) {
 		if ( is_null( $language ) ) {
+            // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound
 			$language = apply_filters( 'wpml_current_language', null );
 		}
 		$option_value = null;
@@ -479,13 +442,8 @@ class Epay_EPIC_Payment_Helper {
 		if ( isset( $options[ $key ] ) ) {
 			$key_value = $options[ $key ];
 			if ( isset( $language ) && $language != "" ) {
-				$option_value = apply_filters(
-					'wpml_translate_single_string',
-					$key_value,
-					"admin_texts_woocommerce_epay_dk_settings",
-					"[woocommerce_epay_dk_settings]" . $key,
-					$language
-				);
+                // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound
+				$option_value = apply_filters('wpml_translate_single_string', $key_value, "admin_texts_woocommerce_epay_dk_settings", "[woocommerce_epay_dk_settings]" . $key, $language );
 			}
 		}
 		// Always return default value in case of not set.
@@ -513,7 +471,7 @@ class Epay_EPIC_Payment_Helper {
 	 * @return Epay_EPIC_Payment
 	 */
 	public static function BOCLASSIC_instance() {
-		return Epay_EPIC_Payment::get_instance();
+		return EpayPayment::get_instance();
 	}
 
 
@@ -978,18 +936,18 @@ class Epay_EPIC_Payment_Helper {
         $name = str_replace('_', '', strtolower($name));
 
         $allicons = [
-            'epay'           => plugins_url('epay-logo.svg', EPAYEPIC_PATH_FILE),
-            'visa'           => plugins_url('images/visa.svg', EPAYEPIC_PATH_FILE),
-            'mastercard'     => plugins_url('images/mastercard.svg', EPAYEPIC_PATH_FILE),
-            'americanexpress'=> plugins_url('images/american_express.svg', EPAYEPIC_PATH_FILE),
-            'dinersclub'     => plugins_url('images/diners_club.svg', EPAYEPIC_PATH_FILE),
-            'ideal'          => plugins_url('images/ideal.svg', EPAYEPIC_PATH_FILE),
-            'jcb'            => plugins_url('images/jcb.svg', EPAYEPIC_PATH_FILE),
-            'maestro'        => plugins_url('images/maestro.svg', EPAYEPIC_PATH_FILE),
-            'dankort'        => plugins_url('images/dankort.svg', EPAYEPIC_PATH_FILE),
-            'applepay'       => plugins_url('images/applepay.svg', EPAYEPIC_PATH_FILE),
-            'vippsmobilepay' => plugins_url('images/mobilepay.svg', EPAYEPIC_PATH_FILE),
-            'googlepay'      => plugins_url('images/googlepay.svg', EPAYEPIC_PATH_FILE),
+            'epay'           => EPAY_PLUGIN_URL.'epay-logo.svg',
+            'visa'           => EPAY_PLUGIN_URL.'images/visa.svg',
+            'mastercard'     => EPAY_PLUGIN_URL.'images/mastercard.svg',
+            'americanexpress'=> EPAY_PLUGIN_URL.'images/american_express.svg',
+            'dinersclub'     => EPAY_PLUGIN_URL.'images/diners_club.svg',
+            'ideal'          => EPAY_PLUGIN_URL.'images/ideal.svg',
+            'jcb'            => EPAY_PLUGIN_URL.'images/jcb.svg',
+            'maestro'        => EPAY_PLUGIN_URL.'images/maestro.svg',
+            'dankort'        => EPAY_PLUGIN_URL.'images/dankort.svg',
+            'applepay'       => EPAY_PLUGIN_URL.'images/applepay.svg',
+            'vippsmobilepay' => EPAY_PLUGIN_URL.'images/mobilepay.svg',
+            'googlepay'      => EPAY_PLUGIN_URL.'images/googlepay.svg',
         ];
 
         if(isset($allicons[$name]))
@@ -1008,7 +966,6 @@ class Epay_EPIC_Payment_Helper {
         $name = str_replace('_', '', strtolower($name));
 
         $allnames = [
-            'epay'           => plugins_url('epay-logo.svg', EPAYEPIC_PATH_FILE),
             'visa'           => "VISA",
             'mastercard'     => "MASTERCARD",
             'americanexpress'=> "American Express",
@@ -1069,7 +1026,7 @@ class Epay_EPIC_Payment_Helper {
 			return;
 		}
 		foreach ( $messages as $message ) {
-			echo wp_kses(Epay_EPIC_Payment_Helper::message_to_html(
+			echo wp_kses(EpayPaymentHelper::message_to_html(
 				$message['type'],
 				$message['message']
             ), array('div','p','strong'));
@@ -1130,12 +1087,142 @@ class Epay_EPIC_Payment_Helper {
     public static function get_ageverification_options()
     {
         $options  = array(
-            '0'  => __( 'None', 'woocommerce' ),
-            '15' => __( '15 Years', 'woocommerce' ),
-            '16' => __( '16 Years', 'woocommerce' ),
-            '18' => __( '18 Years', 'woocommerce' ),
-            '21' => __( '21 Years', 'woocommerce' ));
+            '0'  => __( 'None', 'epay-payment-solutions'),
+            '15' => __( '15 Years', 'epay-payment-solutions' ),
+            '16' => __( '16 Years', 'epay-payment-solutions' ),
+            '18' => __( '18 Years', 'epay-payment-solutions' ),
+            '21' => __( '21 Years', 'epay-payment-solutions' ));
         
         return $options;
+    }
+
+    public static function get_allowed_tags()
+    {
+        $allowed_tags = array(
+            'table'   => array(
+                'class' => true,
+            ),
+            'tr'      => array(
+                'valign' => true,
+                'class' => true,
+            ),
+            'td'      => array(
+                'class' => true,
+                'colspan' => true,
+                'rowspan' => true,
+            ),
+            'th'      => array(
+                'class' => true,
+                'scope' => true,
+            ),
+            'fieldset' => array(
+                'class' => true,
+            ),
+            'label' => array(
+                'for' => true,
+                'class' => true,
+            ),
+            'input' => array(
+                'type'        => true,
+                'name'        => true,
+                'value'       => true,
+                'id'          => true,
+                'class'       => true,
+                'checked'     => true,
+                'disabled'    => true,
+                'readonly'    => true,
+                'placeholder' => true,
+                'step'        => true,
+                'min'         => true,
+                'max'         => true,
+                'size'        => true,
+                'style'       => true,
+                'tabindex'    => true,
+                'autocomplete'=> true,
+                'autocorrect' => true,
+                'autocapitalize' => true,
+                'spellcheck'    => true,
+                'role'          => true,
+                'aria-autocomplete' => true,
+            ),
+            'select' => array(
+                'name'  => true,
+                'id'    => true,
+                'class' => true,
+                'style' => true,
+                'data-placeholder' => true,
+                'multiple' => [],
+            ),
+            'option' => array(
+                'value'    => true,
+                'selected' => true,
+            ),
+            'textarea' => array(
+                'name'        => true,
+                'id'          => true,
+                'class'       => true,
+                'placeholder' => true,
+                'rows'        => true,
+                'cols'        => true,
+                'type'        => true,
+                'style'       => true,
+
+            ),
+            'p' => array(
+                'class' => true,
+            ),
+            'span' => array(
+                'class' => true,
+                'tabindex' => true,
+                'aria-label' => true,
+                'aria-haspopup' => true,
+                'aria-expanded' => true,
+            ),
+            'a' => array(
+                'href'  => true,
+                'class' => true,
+                'id' => true,
+                'target' => true,
+
+            ),
+            'h5' => array(
+                'class' => true,
+            ),
+            'h4' => array(
+                'class' => true,
+            ),
+            'h3' => array(
+                'class' => true,
+            ),
+            'h2' => array(
+                'class' => true,
+            ),
+            'legend' => array(
+                'class' => true,
+
+            ),
+            'br' => array(),
+            'ul' => array(
+                'class' => true,
+                'aria-live' => true,
+                'aria-relevant' => true,
+                'aria-atomic' => true,
+            ),
+            'li' => array(
+                'class' => true,
+                'title' => true,
+            ),
+            'img' => array(
+                'class' => true,
+                'src' => true,
+
+            ),
+            'div' => array(
+                'class' => true,
+                'id' => true
+            )
+        );
+
+        return $allowed_tags;
     }
 }

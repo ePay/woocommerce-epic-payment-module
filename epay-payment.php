@@ -2,77 +2,85 @@
 /**
  * Plugin Name: ePay Payment Solutions - EPIC
  * Plugin URI: https://docs.epay.eu/plugins/woocommerce
- * Description: ePay Payment EPIC gateway for WooCommerce
- * Version: 7.0.1
+ * Description: ePay Payment gateway for WooCommerce
+ * Version: 7.0.10
  * Author: ePay Payment Solutions
  * Author URI: https://www.epay.dk
- * License:           GPL v2 or later
- * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
- * Text Domain: epay-payment-solutions-epic
+ * License: GPL v2 or later
+ * License URI: https://www.gnu.org/licenses/gpl-2.0.html
+ * Text Domain: epay-payment-solutions
+ * Domain Path: /languages
  * Requires Plugins: woocommerce
+ * Requires at least: 6.2
+ * Tested up to: 6.9
+ * Requires PHP: 7.4
  *
- * @author ePay Payment Solutions
- * @package epay_epic_payment
+ * WC requires at least: 7.0
+ * WC tested up to: 9.2
  */
+
+if ( ! defined( 'ABSPATH' ) ) exit;
 
 use Automattic\WooCommerce\Utilities\FeaturesUtil;
 
-define( 'EPAYEPIC_PATH_FILE',  __FILE__ );
-define( 'EPAYEPIC_PATH', dirname( __FILE__ ) );
-define( 'EPAYEPIC_VERSION', '7.0.1' );
+define( 'EPAY_PLUGIN_SLUG', 'epay-payment-solutions' );
+define( 'EPAY_PLUGIN_FILE', __FILE__ );
+define( 'EPAY_PLUGIN_DIR', trailingslashit( plugin_dir_path( __FILE__ ) ) );
+define( 'EPAY_PLUGIN_URL',  trailingslashit( plugin_dir_url( __FILE__ ) ) );
+define( 'EPAY_PLUGIN_VERSION', '7.0.9' );
 
-add_action( 'plugins_loaded', 'init_epay_epic_payment', 0 );
+add_action( 'plugins_loaded', 'epayPaymentInit', 0 );
 
 /**
- * Initilize ePay Payment
+ * Initialize ePay Payment
  *
  * @return void
  */
-function init_epay_epic_payment() {
+function EpayPaymentInit() {
 	if ( ! class_exists( 'WC_Payment_Gateway' ) ) {
 		return;
 	}
 
-	include( EPAYEPIC_PATH . '/lib/epay-payment-soap.php' );
-	include( EPAYEPIC_PATH . '/lib/epay-payment-api.php' );
-	include( EPAYEPIC_PATH . '/lib/epay-payment-helper.php' );
-	include( EPAYEPIC_PATH . '/lib/epay-payment-log.php' );
+	include( EPAY_PLUGIN_DIR . 'lib/epay-payment-api.php' );
+	include( EPAY_PLUGIN_DIR . 'lib/epay-payment-helper.php' );
+	include( EPAY_PLUGIN_DIR . 'lib/epay-payment-log.php' );
 
 	/**
 	 * Gateway class
 	 **/
-	class Epay_EPIC_Payment extends WC_Payment_Gateway {
+	class EpayPayment extends WC_Payment_Gateway {
 
-        public $enabled;
-        public $title;
-        public $description;
-        private $merchant;
-        private $windowid;
-        private $md5key;
-        private $instantcapture;
-        private $group;
-        private $authmail;
-        private $ownreceipt;
-        private $remoteinterface;
-        private $remotepassword;
-        private $enableinvoice;
-        private $addfeetoorder;
-        private $enablemobilepaymentwindow;
-        private $roundingmode;
-        private $captureonstatuscomplete;
-        private $override_subscription_need_payment;
-        private $rolecapturerefunddelete;
-        private $orderstatusaftercancelledpayment;
-        private $ageverificationmode;
-        protected $paymenttype;
-        protected $paymentcollection;
-        private $apikey;
-        private $posid;
+        public $enabled = null;
+        public $hosted_fields = null;
+        public $title = null;
+        public $description = null;
+        private $merchant = null;
+        private $windowid = null;
+        private $md5key = null;
+        private $instantcapture = null;
+        private $group = null;
+        private $authmail = null;
+        private $ownreceipt = null;
+        private $remoteinterface = null;
+        private $remotepassword = null;
+        private $enableinvoice = null;
+        private $addfeetoorder = null;
+        private $enablemobilepaymentwindow = null;
+        private $roundingmode = null;
+        private $captureonstatuscomplete = null;
+        private $override_subscription_need_payment = null;
+        private $rolecapturerefunddelete = null;
+        private $orderstatusaftercancelledpayment = null;
+        private $ageverificationmode = null;
+        protected $paymenttype = null;
+        protected $paymentcollection = null;
+        private $apikey = null;
+        private $posid = null;
 
 		/**
 		 * Singleton instance
 		 *
-		 * @var Epay_EPIC_Payment
+		 * @var EpayPayment
 		 */
 		private static $_instance;
 
@@ -88,7 +96,7 @@ function init_epay_epic_payment() {
 		 *
 		 * @access public
 		 * @static
-		 * @return Epay_EPIC_Payment
+		 * @return EpayPayment
 		 */
 		public static function get_instance() {
 			if ( ! isset( self::$_instance ) ) {
@@ -102,13 +110,13 @@ function init_epay_epic_payment() {
 		 * Construct
 		 */
 		public function __construct() {
-			$this->id                 = 'epay_epic_dk';
-			$this->method_title       = 'ePay Payment Solutions - EPIC';
-			$this->method_description = 'ePay Payment Solutions - EPIC - Enables easy and secure payments on your shop';
+			$this->id                 = 'epay_payment_solutions';
+			$this->method_title       = 'ePay Payment Solutions';
+			$this->method_description = 'ePay Payment Solutions - Enables easy and secure payments on your shop';
 			$this->has_fields         = true;
             $this->paymenttype        = false;
             $this->paymentcollection  = false;
-			$this->icon               = WP_PLUGIN_URL . '/' . plugin_basename( dirname( __FILE__ ) ) . '/epay-logo.svg';
+			$this->icon               = EPAY_PLUGIN_URL . '/epay-logo.svg';
 
 
 			$this->supports = array(
@@ -128,7 +136,7 @@ function init_epay_epic_payment() {
 			);
 
 			// Init the ePay Payment logger
-			$this->_boclassic_log = new Epay_EPIC_Payment_Log();
+			$this->_boclassic_log = new EpayPaymentLog();
 
 			// Load the form fields.
 			$this->init_form_fields();
@@ -136,8 +144,8 @@ function init_epay_epic_payment() {
 			// Load the settings.
 			$this->init_settings();
 
-			// Initilize ePay Payment Settings
-			$this->init_epay_payment_settings();
+			// Initialize ePay Payment Settings
+			$this->initEpayPaymentSettings();
 
 			if ( $this->remoteinterface === 'yes' ) {
 				$this->supports = array_merge( $this->supports, array( 'refunds' ) );
@@ -150,11 +158,12 @@ function init_epay_epic_payment() {
 		}
 
 		/**
-		 * Initilize ePay Payment Settings
+		 * Initialize ePay Payment Settings
 		 */
-		public function init_epay_payment_settings() {
+		public function initEpayPaymentSettings() {
 			// Define user set variables
 			$this->enabled                            = array_key_exists( 'enabled', $this->settings ) ? $this->settings['enabled'] : 'yes';
+			$this->hosted_fields                      = array_key_exists( 'hosted_fields', $this->settings ) ? $this->settings['hosted_fields'] : 'yes';
 			$this->title                              = array_key_exists( 'title', $this->settings ) ? $this->settings['title'] : 'ePay Payment Solutions';
 			$this->description                        = array_key_exists( 'description', $this->settings ) ? $this->settings['description'] : 'Pay using ePay Payment Solutions';
 			$this->merchant                           = array_key_exists( 'merchant', $this->settings ) ? $this->settings['merchant'] : '';
@@ -169,12 +178,12 @@ function init_epay_epic_payment() {
 			$this->enableinvoice                      = array_key_exists( 'enableinvoice', $this->settings ) ? $this->settings['enableinvoice'] : 'no';
 			$this->addfeetoorder                      = array_key_exists( 'addfeetoorder', $this->settings ) ? $this->settings['addfeetoorder'] : 'no';
 			$this->enablemobilepaymentwindow          = array_key_exists( 'enablemobilepaymentwindow', $this->settings ) ? $this->settings['enablemobilepaymentwindow'] : 'yes';
-			$this->roundingmode                       = array_key_exists( 'roundingmode', $this->settings ) ? $this->settings['roundingmode'] : Epay_EPIC_Payment_Helper::ROUND_DEFAULT;
+			$this->roundingmode                       = array_key_exists( 'roundingmode', $this->settings ) ? $this->settings['roundingmode'] : EpayPaymentHelper::ROUND_DEFAULT;
 			$this->captureonstatuscomplete            = array_key_exists( 'captureonstatuscomplete', $this->settings ) ? $this->settings['captureonstatuscomplete'] : 'no';
 			$this->override_subscription_need_payment = array_key_exists( 'overridesubscriptionneedpayment', $this->settings ) ? $this->settings['overridesubscriptionneedpayment'] : 'yes';
 			$this->rolecapturerefunddelete            = array_key_exists( 'rolecapturerefunddelete', $this->settings ) ? $this->settings['rolecapturerefunddelete'] : 'shop_manager';
-            $this->orderstatusaftercancelledpayment   = array_key_exists( 'orderstatusaftercancelledpayment', $this->settings ) ? $this->settings['orderstatusaftercancelledpayment'] : Epay_EPIC_Payment_Helper::STATUS_CANCELLED;
-            $this->ageverificationmode                = array_key_exists( 'ageverificationmode', $this->settings ) ? $this->settings['ageverificationmode'] : Epay_EPIC_Payment_Helper::AGEVERIFICATION_DISABLED;
+            $this->orderstatusaftercancelledpayment   = array_key_exists( 'orderstatusaftercancelledpayment', $this->settings ) ? $this->settings['orderstatusaftercancelledpayment'] : EpayPaymentHelper::STATUS_CANCELLED;
+            $this->ageverificationmode                = array_key_exists( 'ageverificationmode', $this->settings ) ? $this->settings['ageverificationmode'] : EpayPaymentHelper::AGEVERIFICATION_DISABLED;
 			$this->paymentcollection                  = array_key_exists( 'paymentcollection', $this->settings ) ? $this->settings['paymentcollection'] : '0';
 			$this->apikey                             = array_key_exists( 'apikey', $this->settings ) ? $this->settings['apikey'] : '';
 			$this->posid                              = array_key_exists( 'posid', $this->settings ) ? $this->settings['posid'] : '';
@@ -186,6 +195,11 @@ function init_epay_epic_payment() {
             {
                 return $this->settings[$key];
             }
+        }
+
+        public function get_id()
+        {
+            return $this->id;
         }
    
 		/**
@@ -206,16 +220,16 @@ function init_epay_epic_payment() {
 				) );
 
 				if ( $this->remoteinterface == 'yes' ) {
-                    add_action( 'add_meta_boxes', array( $this, 'epay_epic_payment_meta_boxes' ) );
-					add_action( 'wp_before_admin_bar_render', array( $this, 'epay_epic_payment_actions' ) );
-					add_action( 'admin_notices', array( $this, 'epay_epic_payment_admin_notices' ) );
+                    add_action( 'add_meta_boxes', array( $this, 'epayPaymentMetaBoxes' ) );
+					add_action( 'wp_before_admin_bar_render', array( $this, 'epayPaymentActions' ) );
+					add_action( 'admin_notices', array( $this, 'epayPaymentAdminNotices' ) );
 				}
 			}
 			if ( $this->remoteinterface == 'yes' ) {
 				if ( $this->captureonstatuscomplete === 'yes' ) {
 					add_action( 'woocommerce_order_status_completed', array(
 						$this,
-						'epay_payment_order_status_completed'
+						'epayPaymentOrderStatusCompleted'
 					) );
 				}
 			}
@@ -241,38 +255,86 @@ function init_epay_epic_payment() {
 			// Register styles!
 			add_action( 'admin_enqueue_scripts', array(
 				$this,
-				'enqueue_wc_epay_payment_admin_styles_and_scripts'
+				'enqueueEpayPaymentAdminStylesAndScripts'
 			) );
-			add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_wc_epay_payment_front_styles' ) );
+			add_action( 'wp_enqueue_scripts', array( $this, 'enqueueEpayPaymentFrontStyles' ) );
 
+            add_action('rest_api_init', function () {
+                register_rest_route('epay/v1', '/create-session', [
+                    'methods' => 'POST',
+                    'callback' => [ $this, 'epay_create_session' ],
+                    'permission_callback' => '__return_true',
+                ]);
+            }); 
 		}
+
+        function epay_create_session($request) {
+            // $params = $request->get_json_params();
+            // $order_id = $params['order_id'] ?? null;
+
+            $epayHandler = new EpayPaymentApi($this->apikey, $this->posid);
+            
+            $result = $epayHandler->createPaymentRequest(json_encode(array("orderid"=>null, "amount"=>154990, "currency"=>"DKK", "instant"=>"OFF", "accepturl"=>"https:///temp/epay/hosted/?success", "cancelurl"=>"https:///temp/epay/hosted/?failure", "callbackurl"=>"https:///temp/epay/hosted/?notification")));
+            
+            $result = json_decode($result);
+            
+            /*
+            if ( ! function_exists( 'WC' ) ) {
+                return new WP_Error('no_wc', 'WooCommerce ikke tilgængelig', ['status' => 500]);
+            }
+
+            if ( ! WC()->session ) {
+                WC()->initialize_session();
+            }
+
+            if ( ! WC()->cart ) {
+                wc_load_cart();
+            }
+            */
+
+	        // $total = WC()->cart ? WC()->cart->get_total('edit') : 'NO CART';
+
+            
+	        // $total = WC()->cart->get_total('edit');
+	        // $items = WC()->cart->get_cart_contents();
+
+            // error_log('Cart total: ' . WC()->cart->get_total('edit'));
+
+	        return rest_ensure_response([
+		        'payment_session_js_url' => $result->javascript,
+                'cart_total' => 123,
+                'cart_items' => 4,
+                'payment_session' => $result,
+	        ]);
+        }
 
 		/**
 		 * Show messages in the Administration
 		 */
-		public function epay_epic_payment_admin_notices() {
-			Epay_EPIC_Payment_Helper::echo_admin_notices();
+		public function epayPaymentAdminNotices() {
+			EpayPaymentHelper::echo_admin_notices();
 		}
 
 		/**
 		 * Enqueue Admin Styles and Scripts
 		 */
-		public function enqueue_wc_epay_payment_admin_styles_and_scripts() {
-			wp_register_style( 'epay_payment_admin_style', plugins_url( 'style/epay-payment-admin.css', __FILE__ ), array(), 1 );
+		public function enqueueEpayPaymentAdminStylesAndScripts() {
+			wp_register_style( 'epay_payment_admin_style', EPAY_PLUGIN_URL . 'style/epay-payment-admin.css', array(), 1 );
 			wp_enqueue_style( 'epay_payment_admin_style' );
 
 			// Fix for load of Jquery time!
 			wp_enqueue_script( 'jquery' );
-			wp_enqueue_script( 'epay_payment_admin', plugins_url( 'scripts/epay-payment-admin.js', __FILE__ ), array(), 1, false );
+			wp_enqueue_script( 'epay_payment_admin', EPAY_PLUGIN_URL . 'scripts/epay-payment-admin.js', array(), 1, false );
 		}
 
 		/**
 		 * Enqueue Frontend Styles and Scripts
 		 */
-		public function enqueue_wc_epay_payment_front_styles() {
-			wp_register_style( 'epay_epic_payment_front_style', plugins_url( 'style/epay-epic-payment-front.css', __FILE__ ), array(), 1 );
+		public function enqueueEpayPaymentFrontStyles() {
+			wp_register_style( 'epay_epic_payment_front_style', EPAY_PLUGIN_URL . 'style/epay-epic-payment-front.css', array(), 1 );
 			wp_enqueue_style( 'epay_epic_payment_front_style' );
 		}
+
 
 		/**
 		 * Initialise Gateway Settings Form Fields
@@ -287,9 +349,18 @@ function init_epay_epic_payment() {
 				'enabled'                         => array(
 					'title'   => 'Activate module',
 					'type'    => 'checkbox',
-					'label'   => 'Enable ePay EPIC Payment Solutions as a payment option.',
+					'label'   => 'Enable ePay Payment Solutions as a payment option.',
 					'default' => 'yes'
 				),
+                /*
+				'hosted_fileds' => array(
+					'title'       => 'Use hosted fields',
+					'type'        => 'checkbox',
+					'description' => 'When this is enabled the checkout will use hosted fields.',
+                    'desc_tip'    => true,
+					'default'     => 'yes'
+				),
+                */
 				'title'                           => array(
 					'title'       => 'Title',
 					'type'        => 'text',
@@ -362,9 +433,9 @@ function init_epay_epic_payment() {
 					'description' => 'Please select how you want the rounding of the amount sendt to the payment system',
                     'desc_tip'    => true,
 					'options'     => array(
-						Epay_EPIC_Payment_Helper::ROUND_DEFAULT => 'Default',
-						Epay_EPIC_Payment_Helper::ROUND_UP      => 'Always up',
-						Epay_EPIC_Payment_Helper::ROUND_DOWN    => 'Always down'
+						EpayPaymentHelper::ROUND_DEFAULT => 'Default',
+						EpayPaymentHelper::ROUND_UP      => 'Always up',
+						EpayPaymentHelper::ROUND_DOWN    => 'Always down'
 					),
 					'default'     => 'normal'
 				),
@@ -374,8 +445,8 @@ function init_epay_epic_payment() {
 					'description' => 'Please select order status after payment cancelled',
                     'desc_tip'    => true,
 					'options'     => array(
-						Epay_EPIC_Payment_Helper::STATUS_CANCELLED      => 'Cancelled',
-						Epay_EPIC_Payment_Helper::STATUS_PENDING        => 'Pending payment'
+						EpayPaymentHelper::STATUS_CANCELLED      => 'Cancelled',
+						EpayPaymentHelper::STATUS_PENDING        => 'Pending payment'
 					)
 				),
 				'overridesubscriptionneedpayment' => array(
@@ -400,9 +471,9 @@ function init_epay_epic_payment() {
 					'description' => 'Activate Ageverification',
                     'desc_tip'    => true,
 					'options'     => array(
-                        Epay_EPIC_Payment_Helper::AGEVERIFICATION_DISABLED => 'Disabled',
-                        Epay_EPIC_Payment_Helper::AGEVERIFICATION_ENABLED_ALL => 'Enabled on all orders',
-                        Epay_EPIC_Payment_Helper::AGEVERIFICATION_ENABLED_DK => 'Enabled on DK orders'
+                        EpayPaymentHelper::AGEVERIFICATION_DISABLED => 'Disabled',
+                        EpayPaymentHelper::AGEVERIFICATION_ENABLED_ALL => 'Enabled on all orders',
+                        EpayPaymentHelper::AGEVERIFICATION_ENABLED_DK => 'Enabled on DK orders'
 					)
 				)
 			);
@@ -412,30 +483,37 @@ function init_epay_epic_payment() {
 		 * Admin Panel Options
 		 */
 		public function admin_options() {
-			$version = EPAYEPIC_VERSION;
+            $version = EPAY_PLUGIN_VERSION;
 
-			$html = "<h3>{$this->method_title}  v{$version}</h3>";
-			$html .= Epay_EPIC_Payment_Helper::create_admin_debug_section();
-			$html .= '<h3 class="wc-settings-sub-title">Module Configuration</h3>';
+            echo '<h3>' . esc_html( $this->method_title ) . ' v' . esc_html( $version ) . '</h3>';
 
-			if ( class_exists( 'sitepress' ) ) {
-				$html .= '<div class="form-table">
-					<h2>You have WPML activated.</h2>
-					If you need to configure another merchant number for another language translate them under
-					<a href="admin.php?page=wpml-string-translation/menu/string-translation.php&context=admin_texts_woocommerce_epay_dk_settings" class="current" aria-currents="page">String Translation</a>
-					</br>
-					Subscriptions are currently only supported for the default merchant number.
-					</br>	
-</div>';
-			}
+            $debug_html = EpayPaymentHelper::create_admin_debug_section();
+            echo wp_kses_post( $debug_html );
 
-			$html .= '<table class="form-table">';
+            echo '<h3 class="wc-settings-sub-title">' . esc_html__( 'Module Configuration', 'epay-payment-solutions' ) . '</h3>';
 
-			// Generate the HTML For the settings form.!
-			$html .= $this->generate_settings_html( array(), false );
-			$html .= '</table>';
+            if ( class_exists( 'sitepress' ) ) {
+                $url = admin_url( 'admin.php?page=wpml-string-translation/menu/string-translation.php&context=admin_texts_woocommerce_epay_dk_settings' );
 
-			echo ent2ncr( $html );
+                echo '<div class="form-table">';
+                echo '<h2>' . esc_html__( 'You have WPML activated.', 'epay-payment-solutions' ) . '</h2>';
+
+                echo '<p>' . esc_html__( 'If you need to configure another merchant number for another language translate them under', 'epay-payment-solutions' ) . ' ';
+                echo '<a href="' . esc_url( $url ) . '" class="current" aria-current="page">'
+                        . esc_html__( 'String Translation', 'epay-payment-solutions' ) . '</a></p>';
+
+                echo '<p>' . esc_html__( 'Subscriptions are currently only supported for the default merchant number.', 'epay-payment-solutions' ) . '</p>';
+                echo '</div>';
+            }
+
+            echo '<table class="form-table">';
+
+            // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Trusted HTML from WooCommerce settings renderer
+            $settings_html = $this->generate_settings_html( array(), false );
+
+            echo wp_kses( $settings_html, EpayPaymentHelper::get_allowed_tags() );
+
+            echo '</table>';
 		}
 
 		/**
@@ -448,7 +526,7 @@ function init_epay_epic_payment() {
 		 */
 		public function maybe_override_needs_payment( $needs_payment, $order ) {
 
-			if ( ! $needs_payment && $this->id === $order->get_payment_method() && Epay_EPIC_Payment_Helper::get_order_contains_subscription( $order, array( 'parent' ) ) ) {
+			if ( ! $needs_payment && $this->id === $order->get_payment_method() && EpayPaymentHelper::get_order_contains_subscription( $order, array( 'parent' ) ) ) {
 				$needs_payment = true;
 			}
 
@@ -460,22 +538,23 @@ function init_epay_epic_payment() {
 		 *
 		 * @param mixed $order_id
 		 */
-		public function epay_payment_order_status_completed( $order_id ) {
+		public function epayPaymentOrderStatusCompleted( $order_id ) {
 			if ( ! $this->module_check( $order_id ) ) {
 				return;
 			}
 
 			$order          = wc_get_order( $order_id );
 			$order_total    = $order->get_total();
-			$capture_result = $this->epay_payment_capture_payment( $order_id, $order_total, '' );
+			$capture_result = $this->epayPaymentCapturePayment( $order_id, $order_total, '' );
 
 			if ( is_wp_error( $capture_result ) ) {
 				$message = $capture_result->get_error_message( 'epay_payment_error' );
 				$this->_boclassic_log->add( $message );
-				Epay_EPIC_Payment_Helper::add_admin_notices( Epay_EPIC_Payment_Helper::ERROR, $message );
+				EpayPaymentHelper::add_admin_notices( EpayPaymentHelper::ERROR, $message );
 			} else {
-				$message = sprintf( __( 'The Capture action was a success for order %s', 'epay-payment-solutions-epic' ), $order_id );
-				Epay_EPIC_Payment_Helper::add_admin_notices( Epay_EPIC_Payment_Helper::SUCCESS, $message );
+                /* translators: %s is the WooCommerce order ID */
+				$message = sprintf( __( 'The Capture action was a success for order %s', 'epay-payment-solutions' ), $order_id );
+				EpayPaymentHelper::add_admin_notices( EpayPaymentHelper::SUCCESS, $message );
 			}
 		}
 
@@ -483,28 +562,10 @@ function init_epay_epic_payment() {
 		/**
 		 * There are no payment fields for epay, but we want to show the description if set.
          **/
-		public function payment_fields() {
-			$text_replace            = wptexturize( $this->description );
-			$paymentFieldDescription = wpautop( $text_replace );
-            
-            /*
-			$paymentLogos            = '<div id="boclassic_card_logos">';
-
-			if ( class_exists( 'sitepress' ) ) {
-				$merchant_number = Epay_EPIC_Payment_Helper::getWPMLOptionValue( "merchant", $this->merchant );
-			} else {
-				$merchant_number = $this->merchant;
-			}
-
-			if ( $merchant_number ) {
-				$paymentLogos .= '<script type="text/javascript" src="https://relay.ditonlinebetalingssystem.dk/integration/paymentlogos/PaymentLogos.aspx?merchantnumber=' . $merchant_number . '&direction=2&padding=2&rows=1&showdivs=0&logo=0&cardwidth=40&divid=boclassic_card_logos"></script>';
-			}
-
-            $paymentLogos            .= '</div>';
-			$paymentFieldDescription .= $paymentLogos;
-            */
-
-			echo esc_html($paymentFieldDescription);
+        public function payment_fields() {
+            if ( ! empty( $this->description ) ) {
+                echo wp_kses_post( wpautop( $this->description ) );
+            }
         }
 
 		/**
@@ -519,19 +580,19 @@ function init_epay_epic_payment() {
 			if ( $this->enableinvoice == 'yes' ) {
 
 				$invoice['customer']['emailaddress'] = $order->get_billing_email();
-				$invoice['customer']['firstname']    = Epay_EPIC_Payment_Helper::json_value_remove_special_characters( $order->get_billing_first_name() );
-				$invoice['customer']['lastname']     = Epay_EPIC_Payment_Helper::json_value_remove_special_characters( $order->get_billing_last_name() );
-				$invoice['customer']['address']      = Epay_EPIC_Payment_Helper::json_value_remove_special_characters( $order->get_billing_address_1() );
-				$invoice['customer']['zip']          = Epay_EPIC_Payment_Helper::json_value_remove_special_characters( $order->get_billing_postcode() );
-				$invoice['customer']['city']         = Epay_EPIC_Payment_Helper::json_value_remove_special_characters( $order->get_billing_city() );
-				$invoice['customer']['country']      = Epay_EPIC_Payment_Helper::json_value_remove_special_characters( $order->get_billing_country() );
+				$invoice['customer']['firstname']    = EpayPaymentHelper::json_value_remove_special_characters( $order->get_billing_first_name() );
+				$invoice['customer']['lastname']     = EpayPaymentHelper::json_value_remove_special_characters( $order->get_billing_last_name() );
+				$invoice['customer']['address']      = EpayPaymentHelper::json_value_remove_special_characters( $order->get_billing_address_1() );
+				$invoice['customer']['zip']          = EpayPaymentHelper::json_value_remove_special_characters( $order->get_billing_postcode() );
+				$invoice['customer']['city']         = EpayPaymentHelper::json_value_remove_special_characters( $order->get_billing_city() );
+				$invoice['customer']['country']      = EpayPaymentHelper::json_value_remove_special_characters( $order->get_billing_country() );
 
-				$invoice['shippingaddress']['firstname'] = Epay_EPIC_Payment_Helper::json_value_remove_special_characters( $order->get_shipping_first_name() );
-				$invoice['shippingaddress']['lastname']  = Epay_EPIC_Payment_Helper::json_value_remove_special_characters( $order->get_shipping_last_name() );
-				$invoice['shippingaddress']['address']   = Epay_EPIC_Payment_Helper::json_value_remove_special_characters( $order->get_shipping_address_1() );
-				$invoice['shippingaddress']['zip']       = Epay_EPIC_Payment_Helper::json_value_remove_special_characters( $order->get_shipping_postcode() );
-				$invoice['shippingaddress']['city']      = Epay_EPIC_Payment_Helper::json_value_remove_special_characters( $order->get_shipping_city() );
-				$invoice['shippingaddress']['country']   = Epay_EPIC_Payment_Helper::json_value_remove_special_characters( $order->get_shipping_country() );
+				$invoice['shippingaddress']['firstname'] = EpayPaymentHelper::json_value_remove_special_characters( $order->get_shipping_first_name() );
+				$invoice['shippingaddress']['lastname']  = EpayPaymentHelper::json_value_remove_special_characters( $order->get_shipping_last_name() );
+				$invoice['shippingaddress']['address']   = EpayPaymentHelper::json_value_remove_special_characters( $order->get_shipping_address_1() );
+				$invoice['shippingaddress']['zip']       = EpayPaymentHelper::json_value_remove_special_characters( $order->get_shipping_postcode() );
+				$invoice['shippingaddress']['city']      = EpayPaymentHelper::json_value_remove_special_characters( $order->get_shipping_city() );
+				$invoice['shippingaddress']['country']   = EpayPaymentHelper::json_value_remove_special_characters( $order->get_shipping_country() );
 
 				$invoice['lines'] = $this->create_invoice_order_lines( $order, $minorunits );
 
@@ -561,9 +622,9 @@ function init_epay_epic_payment() {
 				$item_vat_amount       = $order->get_line_tax( $item );
 				$invoice_order_lines[] = array(
 					'id'          => $item['product_id'],
-					'description' => Epay_EPIC_Payment_Helper::json_value_remove_special_characters( $item['name'] ),
+					'description' => EpayPaymentHelper::json_value_remove_special_characters( $item['name'] ),
 					'quantity'    => $item['qty'],
-					'price'       => Epay_EPIC_Payment_Helper::convert_price_to_minorunits( $item_price, $minorunits, $this->roundingmode ),
+					'price'       => EpayPaymentHelper::convert_price_to_minorunits( $item_price, $minorunits, $this->roundingmode ),
 					'vat'         => $item_vat_amount > 0 ? ( $item_vat_amount / $item_total ) * 100 : 0,
 				);
 			}
@@ -576,7 +637,7 @@ function init_epay_epic_payment() {
 					'id'          => $shipping_method->get_method_id(),
 					'description' => $shipping_method->get_method_title(),
 					'quantity'    => 1,
-					'price'       => Epay_EPIC_Payment_Helper::convert_price_to_minorunits( $shipping_total, $minorunits, $this->roundingmode ),
+					'price'       => EpayPaymentHelper::convert_price_to_minorunits( $shipping_total, $minorunits, $this->roundingmode ),
 					'vat'         => $shipping_tax > 0 ? ( $shipping_tax / $shipping_total ) * 100 : 0,
 				);
 			}
@@ -591,14 +652,15 @@ function init_epay_epic_payment() {
 		 *
 		 * @return string[]
 		 */
+        
 		public function process_payment( $order_id ) {
-			// $order = wc_get_order( $order_id );
+			$order = wc_get_order( $order_id );
 
 			return array(
 				'result'   => 'success',
-				'redirect' => $this->createPaymentRequestLink($order_id),
+                'redirect' => $this->createPaymentRequestLink($order_id), // EPIC PaymentWindow
 			);
-		}
+        }
 
 		/**
 		 * Process Refund
@@ -615,22 +677,23 @@ function init_epay_epic_payment() {
 				//The user has the role required for  "Capture, Refund, Delete"  and can perform those actions.
 			} else {
 				//The user can only view the data.
-				return new WP_Error( 'notpermitted', __( "Your user role is not allowed to refund via Epay Payment", "epay-payment-solutions-epic" ) );
+				return new WP_Error( 'notpermitted', __( "Your user role is not allowed to refund via Epay Payment", "epay-payment-solutions" ) );
 			}
 
 			if ( ! isset( $amount ) ) {
 				return true;
 			}
 			if ( $amount < 1 ) {
-				return new WP_Error( 'toolow', __( "You have to refund a higher amount than 0.", "epay-payment-solutions-epic" ) );
+				return new WP_Error( 'toolow', __( "You have to refund a higher amount than 0.", "epay-payment-solutions" ) );
 			}
 
-			$refund_result = $this->epay_payment_refund_payment( $order_id, $amount, '' );
+			$refund_result = $this->epayPaymentRefundPayment( $order_id, $amount, '' );
 			if ( is_wp_error( $refund_result ) ) {
 				return $refund_result;
 			} else {
-				$message = __( "The Refund action was a success for order {$order_id}", 'epay-payment-solutions-epic' );
-				Epay_EPIC_Payment_Helper::add_admin_notices( Epay_EPIC_Payment_Helper::SUCCESS, $message );
+                /* translators: %s is the WooCommerce order ID */
+                $message = sprintf( __( 'The Refund action was a success for order %s', 'epay-payment-solutions' ), $order_id );
+				EpayPaymentHelper::add_admin_notices( EpayPaymentHelper::SUCCESS, $message );
 			}
 
 			return true;
@@ -643,16 +706,17 @@ function init_epay_epic_payment() {
 		 * @param WC_Order $renewal_order
 		 */
 		public function scheduled_subscription_payment( $amount_to_charge, $renewal_order ) {
-			$subscription     = Epay_EPIC_Payment_Helper::get_subscriptions_for_renewal_order( $renewal_order );
+			$subscription     = EpayPaymentHelper::get_subscriptions_for_renewal_order( $renewal_order );
 			$result           = $this->process_subscription_payment( $amount_to_charge, $renewal_order, $subscription );
 			$renewal_order_id = $renewal_order->get_id();
 
 			// Remove the ePay Payment subscription id copyid from the subscription
 
-			$renewal_order->delete_meta_data( Epay_EPIC_Payment_Helper::EPAY_PAYMENT_SUBSCRIPTION_ID );
+			$renewal_order->delete_meta_data( EpayPaymentHelper::EPAY_PAYMENT_SUBSCRIPTION_ID );
 			$renewal_order->save();
 			if ( is_wp_error( $result ) ) {
-				$message = sprintf( __( 'ePay Payment Solutions Subscription could not be authorized for renewal order # %s - %s', 'epay-payment-solutions-epic' ), $renewal_order_id, $result->get_error_message( 'epay_payment_error' ) );
+                /* translators: 1: Renewal order ID, 2: Error message */
+				$message = sprintf( __( 'ePay Payment Solutions Subscription could not be authorized for renewal order # %1$s - %2$s', 'epay-payment-solutions' ), $renewal_order_id, $result->get_error_message( 'epay_payment_error' ) );
 				$renewal_order->update_status( 'failed', $message );
 				$this->_boclassic_log->add( $message );
 			}
@@ -666,44 +730,46 @@ function init_epay_epic_payment() {
 		 * @param WC_Subscription $subscription
 		 */
 		public function process_subscription_payment( $amount, $renewal_order, $subscription ) {
-			try {
-				$epay_subscription_id = Epay_EPIC_Payment_Helper::get_epay_payment_subscription_id( $subscription );
+			// try {
+				$epay_subscription_id = EpayPaymentHelper::get_epay_payment_subscription_id( $subscription );
 				if ( strlen( $epay_subscription_id ) === 0 ) {
-					return new WP_Error( 'epay_payment_error', __( 'ePay Payment Solutions Subscription id was not found', 'epay-payment-solutions-epic' ) );
+					return new WP_Error( 'epay_payment_error', __( 'ePay Payment Solutions Subscription id was not found', 'epay-payment-solutions' ) );
 				}
 
 				$order_currency   = $renewal_order->get_currency();
-				$minorunits       = Epay_EPIC_Payment_Helper::get_currency_minorunits( $order_currency );
-				$amount           = Epay_EPIC_Payment_Helper::convert_price_to_minorunits( $amount, $minorunits, $this->roundingmode );
+				$minorunits       = EpayPaymentHelper::get_currency_minorunits( $order_currency );
+				$amount           = EpayPaymentHelper::convert_price_to_minorunits( $amount, $minorunits, $this->roundingmode );
 				$renewal_order_id = $renewal_order->get_id();
 
-				$webservice         = new Epay_EPIC_Payment_Soap( $this->remotepassword, true, $this->apikey, $this->posid );
-				$authorize_response = $webservice->authorize( $this->merchant, $epay_subscription_id, $renewal_order_id, $amount, Epay_EPIC_Payment_Helper::get_iso_code( $order_currency ), (bool) Epay_EPIC_Payment_Helper::yes_no_to_int( $this->instantcapture ), $this->group, $this->authmail );
-				if ( $authorize_response->authorizeResult === false ) {
-					$error_message = '';
-					if ( $authorize_response->epayresponse != '-1' ) {
-						$error_message = $webservice->get_epay_error( $this->merchant, $authorize_response->epayresponse );
-					} elseif ( $authorize_response->pbsresponse != '-1' ) {
-						$error_message = $webservice->get_pbs_error( $this->merchant, $authorize_response->pbsresponse );
-					}
+                $epayPaymentApi = new EpayPaymentApi($this->apikey, $this->posid);
+                $instantcapture = ((bool) EpayPaymentHelper::yes_no_to_int( $this->instantcapture ) ? "NO_VOID" : "OFF");
+                $authorizeResultJson = $epayPaymentApi->authorize($epay_subscription_id, $amount, $order_currency, (string) $renewal_order_id, $instantcapture, $renewal_order_id, EpayPaymentHelper::get_epay_payment_callback_url());
+                $authorizeResult = json_decode($authorizeResultJson, true);
 
-					return new WP_Error( 'epay_payment_error', $error_message );
-				}
-                
-                if(isset($authorize_response->transactionid) && !empty($authorize_response->transactionid))
+                if($authorizeResult['transaction']['state'] == "PENDING")
                 {
-                    $renewal_order->payment_complete( $authorize_response->transactionid );
+                    $renewal_order->payment_complete( $authorizeResult['transaction']['id'] );
+
+                    $message = sprintf( __( 'ePay Payment Solutions Subscription was authorized for renewal order %1$s with transaction id %2$s', 'epay-payment-solutions' ), $renewal_order_id, $authorizeResult['transaction']['id'] );
+                    $renewal_order->add_order_note( $message );
+                    $subscription->add_order_note( $message );
+
+                    return true;
+
+                } else {
+                    $error_message = sprintf(
+                            __( 'Failed to authorize the ePay Payment Solutions subscription for renewal order %1$s.', 'epay-payment-solutions' ),
+                            $renewal_order_id
+                    );
+
+                    $renewal_order->add_order_note( $error_message );
+                    $subscription->add_order_note( $error_message );
+
+                    return new WP_Error( 'epay_payment_error', $error_message );
                 }
-
-				// Add order note
-				$message = sprintf( __( 'ePay Payment Solutions Subscription was authorized for renewal order %s with transaction id %s', 'epay-payment-solutions-epic' ), $renewal_order_id, $authorize_response->transactionid );
-				$renewal_order->add_order_note( $message );
-				$subscription->add_order_note( $message );
-
-				return true;
-			} catch ( Exception $ex ) {
-				return new WP_Error( 'epay_payment_error', $ex->getMessage() );
-			}
+			//} catch ( Exception $ex ) {
+			//	return new WP_Error( 'epay_payment_error', $ex->getMessage() );
+			//}
 		}
 
 		/**
@@ -717,7 +783,8 @@ function init_epay_epic_payment() {
 				$result = $this->process_subscription_cancellation( $subscription );
 
 				if ( is_wp_error( $result ) ) {
-					$message = sprintf( __( 'ePay Payment Solutions Subscription could not be canceled - %s', 'epay-payment-solutions-epic' ), $result->get_error_message( 'epay_payment_error' ) );
+                    /* translators: 1: Error message */
+					$message = sprintf( __( 'ePay Payment Solutions Subscription could not be canceled - %s', 'epay-payment-solutions' ), $result->get_error_message( 'epay_payment_error' ) );
 					$subscription->add_order_note( $message );
 					$this->_boclassic_log->add( $message );
 				}
@@ -731,23 +798,23 @@ function init_epay_epic_payment() {
 		 */
 		protected function process_subscription_cancellation( $subscription ) {
 			try {
-				if ( Epay_EPIC_Payment_Helper::order_is_subscription( $subscription ) ) {
-					$epay_subscription_id = Epay_EPIC_Payment_Helper::get_epay_payment_subscription_id( $subscription );
-					if ( strlen( $epay_subscription_id ) === 0 ) {
-						$order_note = __( 'ePay Payment Solutions Subscription ID was not found', 'epay-payment-solutions-epic' );
+				if ( EpayPaymentHelper::order_is_subscription( $subscription ) ) {
+					$epay_subscription_id = EpayPaymentHelper::get_epay_payment_subscription_id( $subscription );
+                    if ( empty( $epay_subscription_id ) ) {
+						$order_note = __( 'ePay Payment Solutions Subscription ID was not found', 'epay-payment-solutions' );
 
 						return new WP_Error( 'epay_payment_error', $order_note );
 					}
 
-					$webservice                   = new Epay_EPIC_Payment_Soap( $this->remotepassword, true, $this->apikey, $this->posid );
-					$delete_subscription_response = $webservice->delete_subscription( $this->merchant, $epay_subscription_id );
-					if ( $delete_subscription_response->deletesubscriptionResult === true ) {
-						$subscription->add_order_note( sprintf( __( 'Subscription successfully Cancelled. - ePay Payment Solutions Subscription Id: %s', 'epay-payment-solutions-epic' ), $epay_subscription_id ) );
+                    $epayPaymentApi = new EpayPaymentApi($this->apikey, $this->posid);
+                    $deleteSubscriptionResult = $epayPaymentApi->delete_subscription($epay_subscription_id);
+
+					if ( $deleteSubscriptionResult === true ) {
+                        /* translators: 1: ePay subscription id */
+						$subscription->add_order_note( sprintf( __( 'Subscription successfully Cancelled. - ePay Payment Solutions Subscription Id: %s', 'epay-payment-solutions' ), $epay_subscription_id ) );
 					} else {
-						$order_note = sprintf( __( 'ePay Payment Solutions Subscription Id: %s', 'epay-payment-solutions-epic' ), $epay_subscription_id );
-						if ( $delete_subscription_response->epayresponse != '-1' ) {
-							$order_note .= ' - ' . $webservice->get_epay_error( $this->merchant, $delete_subscription_response->epayresponse );
-						}
+                        /* translators: 1: ePay subscription id */
+						$order_note = sprintf( __( 'Failed to cancel the subscription. ePay Payment Solutions Subscription ID: %s', 'epay-payment-solutions' ), $epay_subscription_id );
 
 						return new WP_Error( 'epay_payment_error', $order_note );
 					}
@@ -763,38 +830,39 @@ function init_epay_epic_payment() {
 		 * receipt_page
 		 **/
 		// public function receipt_page( $order_id ) {
-		public function createPaymentRequestLink( $order_id ) {
+		public function createPaymentRequestLink( $order_id, $return_obj=false ) {
 			$order                               = wc_get_order( $order_id );
-			$is_request_to_change_payment_method = Epay_EPIC_Payment_Helper::order_is_subscription( $order );
+			$is_request_to_change_payment_method = EpayPaymentHelper::order_is_subscription( $order );
 
 			$order_currency = $order->get_currency();
 			$order_total    = $order->get_total();
-			$minorunits     = Epay_EPIC_Payment_Helper::get_currency_minorunits( $order_currency );
+			$minorunits     = EpayPaymentHelper::get_currency_minorunits( $order_currency );
 
 			if ( class_exists( 'sitepress' ) ) {
-				$merchant_number = Epay_EPIC_Payment_Helper::getWPMLOptionValue( "merchant", $this->merchant );
+				$merchant_number = EpayPaymentHelper::getWPMLOptionValue( "merchant", $this->merchant );
 			} else {
 				$merchant_number = $this->merchant;
 			}
 
 			$epay_args = array(
 				'encoding'       => 'UTF-8',
-				'cms'            => Epay_EPIC_Payment_Helper::get_module_header_info(),
+				'cms'            => EpayPaymentHelper::get_module_header_info(),
 				'windowstate'    => "3",
-				'mobile'         => Epay_EPIC_Payment_Helper::yes_no_to_int( $this->enablemobilepaymentwindow ),
+				'mobile'         => EpayPaymentHelper::yes_no_to_int( $this->enablemobilepaymentwindow ),
 				'merchantnumber' => $merchant_number,
 				'windowid'       => $this->windowid,
 				'currency'       => $order_currency,
-				'amount'         => Epay_EPIC_Payment_Helper::convert_price_to_minorunits( $order_total, $minorunits, $this->roundingmode ),
+				'amount'         => EpayPaymentHelper::convert_price_to_minorunits( $order_total, $minorunits, $this->roundingmode ),
 				'orderid'        => $this->clean_order_number( $order->get_order_number() ),
-				'accepturl'      => Epay_EPIC_Payment_Helper::get_accept_url( $order ),
-				'cancelurl'      => Epay_EPIC_Payment_Helper::get_decline_url( $order, $this->orderstatusaftercancelledpayment),
-				'callbackurl'    => apply_filters( 'epay_payment_callback_url', Epay_EPIC_Payment_Helper::get_epay_payment_callback_url( $order_id ) ),
+                'wcorderid'      => $order_id,
+				'accepturl'      => EpayPaymentHelper::get_accept_url( $order ),
+				'cancelurl'      => EpayPaymentHelper::get_decline_url( $order, $this->orderstatusaftercancelledpayment),
+				'callbackurl'    => apply_filters( 'epay_payment_callback_url', EpayPaymentHelper::get_epay_payment_callback_url() ),
 				'mailreceipt'    => $this->authmail,
-				'instantcapture' => Epay_EPIC_Payment_Helper::yes_no_to_int( $this->instantcapture ),
+				'instantcapture' => EpayPaymentHelper::yes_no_to_int( $this->instantcapture ),
 				'group'          => $this->group,
-				'language'       => Epay_EPIC_Payment_Helper::get_language_code( get_locale() ),
-				'ownreceipt'     => Epay_EPIC_Payment_Helper::yes_no_to_int( $this->ownreceipt ),
+				'language'       => EpayPaymentHelper::get_language_code( get_locale() ),
+				'ownreceipt'     => EpayPaymentHelper::yes_no_to_int( $this->ownreceipt ),
 				'timeout'        => '60'
 			);
 
@@ -805,9 +873,9 @@ function init_epay_epic_payment() {
                 $epay_args['lockpaymentcollection'] = 1;
             }
 
-            if($this->ageverificationmode == Epay_EPIC_Payment_Helper::AGEVERIFICATION_ENABLED_ALL || ($this->ageverificationmode == Epay_EPIC_Payment_Helper::AGEVERIFICATION_ENABLED_DK && $order->get_shipping_country() == "DK"))
+            if($this->ageverificationmode == EpayPaymentHelper::AGEVERIFICATION_ENABLED_ALL || ($this->ageverificationmode == EpayPaymentHelper::AGEVERIFICATION_ENABLED_DK && $order->get_shipping_country() == "DK"))
             {
-                $minimumuserage = Epay_EPIC_Payment_Helper::get_minimumuserage($order);
+                $minimumuserage = EpayPaymentHelper::get_minimumuserage($order);
                 $countryId = false;
                 
                 if($minimumuserage > 0)
@@ -822,19 +890,19 @@ function init_epay_epic_payment() {
                 $epay_args['invoice'] = $this->create_invoice( $order, $minorunits );
             }
 
-			if ( Epay_EPIC_Payment_Helper::woocommerce_subscription_plugin_is_active() && ( Epay_EPIC_Payment_Helper::order_contains_subscription( $order )) ) {
+			if ( EpayPaymentHelper::woocommerce_subscription_plugin_is_active() && ( EpayPaymentHelper::order_contains_subscription( $order )) ) {
 				$epay_args['subscription'] = 1;
 			}
             elseif($is_request_to_change_payment_method)
             {
 				$epay_args['subscription'] = 2;
                 
-                $subscription = Epay_EPIC_Payment_Helper::get_subscriptions_for_order($order->parent_id)[$order_id];
-                $epay_args['subscriptionid'] =  Epay_EPIC_Payment_Helper::get_epay_payment_subscription_id($subscription);
+                $subscription = EpayPaymentHelper::get_subscriptions_for_order($order->parent_id)[$order_id];
+                $epay_args['subscriptionid'] =  EpayPaymentHelper::get_epay_payment_subscription_id($subscription);
             }
 
 			if ( class_exists( 'sitepress' ) ) {
-				$md5_key = Epay_EPIC_Payment_Helper::getWPMLOptionValue( 'md5key', Epay_EPIC_Payment_Helper::getWPMLOrderLanguage( $order ), $this->md5key );
+				$md5_key = EpayPaymentHelper::getWPMLOptionValue( 'md5key', EpayPaymentHelper::getWPMLOrderLanguage( $order ), $this->md5key );
 			} else {
 				$md5_key = $this->md5key;
 			}
@@ -849,11 +917,16 @@ function init_epay_epic_payment() {
 			$epay_args      = apply_filters( 'epay_payment_epay_args', $epay_args, $order_id );
 			$epay_args_json = wp_json_encode( $epay_args );
 
-		    // $payment_link   = Epay_EPIC_Payment_Helper::create_epay_payment_payment_html( $epay_args_json, $this->apikey, $this->posid );
+		    // $payment_link   = EpayPaymentHelper::create_epay_payment_payment_html( $epay_args_json, $this->apikey, $this->posid );
 
-            $epay_epic_payment_api = new epay_epic_payment_api($this->apikey, $this->posid);
-            $request = $epay_epic_payment_api->createPaymentRequest($epay_args_json);
+            $epayPaymentApi = new EpayPaymentApi($this->apikey, $this->posid);
+            $request = $epayPaymentApi->createPaymentRequest($epay_args_json);
             $request_data = json_decode($request);
+
+            if($return_obj)
+            {
+                return $request_data;
+            }
 
             $paymentWindowUrl = $request_data->paymentWindowUrl;
             return $paymentWindowUrl;
@@ -875,13 +948,14 @@ function init_epay_epic_payment() {
 		 **/
 		public function epay_payment_callback() {
 
+            // Read raw JSON payload from the payment gateway callback request.
             $rawData = file_get_contents("php://input");
             $data = json_decode($rawData, true);
 
             $payment_type_map = array ( "Dankort"=>1, "Visa"=>3, "Mastercard"=>4, "JCB"=>6, "Maestro"=>7, "Diners Club"=>8, "American Express"=>9);
 
             $params['txnid'] = $data['transaction']['id'];
-            $params['wcorderid'] = $data['transaction']['reference'];
+            $params['wcorderid'] = $data['session']['attributes']['wcorderid'];
             if(isset($data['subscription']['id']))
             {
                 $params['subscriptionid'] = $data['subscription']['id'];
@@ -891,12 +965,11 @@ function init_epay_epic_payment() {
 
             $this->md5key = null;
 
-
 			$message       = '';
 			$order         = null;
 			$response_code = 400;
 			try {
-				$is_valid_call = Epay_EPIC_Payment_Helper::validate_epay_payment_callback_params( $params, $this->md5key, $order, $message );
+				$is_valid_call = EpayPaymentHelper::validate_epay_payment_callback_params( $params, $this->md5key, $order, $message );
 				if ( $is_valid_call ) {
 					$message       = $this->process_epay_payment_callback( $order, $params );
 					$response_code = 200;
@@ -918,7 +991,7 @@ function init_epay_epic_payment() {
 				$this->_boclassic_log->separator();
 			}
 
-			$header = 'X-EPay-System: ' . Epay_EPIC_Payment_Helper::get_module_header_info();
+			$header = 'X-EPay-System: ' . EpayPaymentHelper::get_module_header_info();
 			header( $header, true, $response_code );
 			die( esc_html($message) );
 
@@ -934,7 +1007,7 @@ function init_epay_epic_payment() {
 			try {
 				$type                    = '';
 				$epay_subscription_id = array_key_exists( 'subscriptionid', $params ) ? $params['subscriptionid'] : null;
-				if ( ( Epay_EPIC_Payment_Helper::order_contains_subscription( $order ) || Epay_EPIC_Payment_Helper::order_is_subscription( $order ) ) && isset( $epay_subscription_id ) ) {
+				if ( ( EpayPaymentHelper::order_contains_subscription( $order ) || EpayPaymentHelper::order_is_subscription( $order ) ) && isset( $epay_subscription_id ) ) {
 					$action = $this->process_subscription( $order, $params );
 					$type   = "Subscription {$action}";
 				} else {
@@ -958,10 +1031,11 @@ function init_epay_epic_payment() {
 		 */
 		protected function process_standard_payments( $order, $params ) {
 			$action             = '';
-			$old_transaction_id = Epay_EPIC_Payment_Helper::get_epay_payment_transaction_id( $order );
+			$old_transaction_id = EpayPaymentHelper::getEpayPaymentTransactionId( $order );
 			if ( empty( $old_transaction_id ) ) {
 				$this->add_surcharge_fee_to_order( $order, $params );
-				$order->add_order_note( sprintf( __( 'ePay Payment completed with transaction id %s', 'epay-payment-solutions-epic' ), $params['txnid'] ) );
+                /* translators: 1: ePay transaction id */
+				$order->add_order_note( sprintf( __( 'ePay Payment completed with transaction id %s', 'epay-payment-solutions' ), $params['txnid'] ) );
 				$this->add_or_update_payment_type_id_to_order( $order, $params['paymenttype'] );
 				$action = 'created';
 			} else {
@@ -991,13 +1065,14 @@ function init_epay_epic_payment() {
 		protected function process_subscription( $order, $params ) {
 			$action                  = '';
 			$epay_subscription_id = $params['subscriptionid'];
-			if ( Epay_EPIC_Payment_Helper::order_is_subscription( $order ) ) {
+			if ( EpayPaymentHelper::order_is_subscription( $order ) ) {
 				// Do not cancel subscription if the callback is called more than once !
-				$old_epay_subscription_id = Epay_EPIC_Payment_Helper::get_epay_payment_subscription_id( $order );
+				$old_epay_subscription_id = EpayPaymentHelper::get_epay_payment_subscription_id( $order );
 				if ( $epay_subscription_id != $old_epay_subscription_id ) {
 					$this->subscription_cancellation( $order, true );
 					$action = 'changed';
-					$order->add_order_note( sprintf( __( 'ePay Payment Subscription changed from: %s to: %s', 'epay-payment-solutions-epic' ), $old_epay_subscription_id, $epay_subscription_id ) );
+                    /* translators: 1: Old subscription ID, 2: New subscription ID */
+					$order->add_order_note( sprintf( __( 'ePay Payment Subscription changed from: %1$s to: %2$s', 'epay-payment-solutions' ), $old_epay_subscription_id, $epay_subscription_id ) );
 					$order->payment_complete();
 					$this->save_subscription_meta( $order, $epay_subscription_id, true );
 				} else {
@@ -1005,16 +1080,16 @@ function init_epay_epic_payment() {
 				}
 			} else {
 				// Do not add surcharge if the callback is called more than once!
-				$old_transaction_id     = Epay_EPIC_Payment_Helper::get_epay_payment_transaction_id( $order );
+				$old_transaction_id     = EpayPaymentHelper::getEpayPaymentTransactionId( $order );
 				$epay_transaction_id = $params['txnid'];
 				if ( $epay_transaction_id != $old_transaction_id ) {
 					$this->add_surcharge_fee_to_order( $order, $params );
 					$action = 'activated';
-					$order->add_order_note( sprintf( __( 'ePay Payment Subscription activated with subscription id: %s', 'epay-payment-solutions-epic' ), $epay_subscription_id ) );
+                    /* translators: 1: ePay Subscription ID */
+					$order->add_order_note( sprintf( __( 'ePay Payment Subscription activated with subscription id: %s', 'epay-payment-solutions' ), $epay_subscription_id ) );
 					$order->payment_complete( $epay_transaction_id );
 					$this->save_subscription_meta( $order, $epay_subscription_id, false );
 					$this->add_or_update_payment_type_id_to_order( $order, $params['paymenttype'] );
-					do_action( 'processed_subscription_payments_for_order', $order );
 				} else {
 					$action = 'activated (Called multiple times)';
 				}
@@ -1031,12 +1106,12 @@ function init_epay_epic_payment() {
 		 */
 		protected function add_surcharge_fee_to_order( $order, $params ) {
 			$order_currency           = $order->get_currency();
-			$minorunits               = Epay_EPIC_Payment_Helper::get_currency_minorunits( $order_currency );
+			$minorunits               = EpayPaymentHelper::get_currency_minorunits( $order_currency );
 			$fee_amount_in_minorunits = $params['txnfee'];
 			if ( $fee_amount_in_minorunits > 0 && $this->addfeetoorder === 'yes' ) {
-				$fee_amount = Epay_EPIC_Payment_Helper::convert_price_from_minorunits( $fee_amount_in_minorunits, $minorunits );
+				$fee_amount = EpayPaymentHelper::convert_price_from_minorunits( $fee_amount_in_minorunits, $minorunits );
 				$fee        = (object) array(
-					'name'      => __( 'Surcharge Fee', 'epay-payment-solutions-epic' ),
+					'name'      => __( 'Surcharge Fee', 'epay-payment-solutions' ),
 					'amount'    => $fee_amount,
 					'taxable'   => false,
 					'tax_class' => null,
@@ -1068,9 +1143,9 @@ function init_epay_epic_payment() {
 		 * @return void
 		 */
 		protected function add_or_update_payment_type_id_to_order( $order, $payment_type_id ) {
-			$existing_payment_type_id = $order->get_meta( Epay_EPIC_Payment_Helper::EPAY_PAYMENT_PAYMENT_TYPE_ID, true );
+			$existing_payment_type_id = $order->get_meta( EpayPaymentHelper::EPAY_PAYMENT_PAYMENT_TYPE_ID, true );
 			if ( ! isset( $existing_payment_type_id ) || $existing_payment_type_id !== $payment_type_id ) {
-				$order->update_meta_data( Epay_EPIC_Payment_Helper::EPAY_PAYMENT_PAYMENT_TYPE_ID, $payment_type_id );
+				$order->update_meta_data( EpayPaymentHelper::EPAY_PAYMENT_PAYMENT_TYPE_ID, $payment_type_id );
 				$order->save();
 			}
 		}
@@ -1086,14 +1161,15 @@ function init_epay_epic_payment() {
 			$epay_subscription_id = wc_clean( $epay_subscription_id );
 			$order_id                = $order->get_id();
 			if ( $is_subscription ) {
-				$order->update_meta_data( Epay_EPIC_Payment_Helper::EPAY_PAYMENT_SUBSCRIPTION_ID, $epay_subscription_id );
+				$order->update_meta_data( EpayPaymentHelper::EPAY_PAYMENT_SUBSCRIPTION_ID, $epay_subscription_id );
 				$order->save();
 			} else {
 				// Also store it on the subscriptions being purchased in the order
-				$subscriptions = Epay_EPIC_Payment_Helper::get_subscriptions_for_order( $order_id );
+				$subscriptions = EpayPaymentHelper::get_subscriptions_for_order( $order_id );
 				foreach ( $subscriptions as $subscription ) {
-					$subscription->update_meta_data( Epay_EPIC_Payment_Helper::EPAY_PAYMENT_SUBSCRIPTION_ID, $epay_subscription_id );
-					$subscription->add_order_note( sprintf( __( 'ePay Payment Solutions Subscription activated with subscription id: %s by order %s', 'epay-payment-solutions-epic' ), $epay_subscription_id, $order_id ) );
+					$subscription->update_meta_data( EpayPaymentHelper::EPAY_PAYMENT_SUBSCRIPTION_ID, $epay_subscription_id );
+                    /* translators: 1: ePay subscription ID, 2: WooCommerce order ID */
+					$subscription->add_order_note( sprintf( __( 'ePay Payment Solutions Subscription activated with subscription id: %1$s by order %2$s', 'epay-payment-solutions' ), $epay_subscription_id, $order_id ) );
 					$subscription->save();
 				}
 			}
@@ -1102,29 +1178,86 @@ function init_epay_epic_payment() {
 		/**
 		 * Handle ePay Payment Actions
 		 */
-		public function epay_epic_payment_actions() {
-			if ( isset( $_GET['boclassicaction'] ) && isset( $_GET['boclassicnonce'] ) && wp_verify_nonce( wp_unslash($_GET['boclassicnonce']), 'boclassic_process_payment_action' ) ) {
-				$params   = $_GET;
-				$result   = $this->process_epay_payment_action( $params );
-				$action   = $params['boclassicaction'];
-				$order_id = $params['post'] ?? $params['id'];
+		public function epayPaymentActions() {
 
-				if ( is_wp_error( $result ) ) {
-					$message = $result->get_error_message( 'epay_payment_error' );
-					$this->_boclassic_log->add( $message );
-					Epay_EPIC_Payment_Helper::add_admin_notices( Epay_EPIC_Payment_Helper::ERROR, $message );
-				} else {
-					global $post;
-					$message = sprintf( __( 'The %s action was a success for order %s', 'epay-payment-solutions-epic' ), $action, $order_id );
-					Epay_EPIC_Payment_Helper::add_admin_notices( Epay_EPIC_Payment_Helper::SUCCESS, $message, true );
-					if ( ! isset( $post ) ) {
-						$url = admin_url( 'admin.php?page=wc-orders&action=edit&id=' . $order_id );
-					} else {
-						$url = admin_url( 'post.php?post=' . $order_id . '&action=edit' );
-					}
-					wp_safe_redirect( $url );
-				}
-			}
+            // Ensure required GET parameters exist
+            if ( ! isset( $_GET['boclassicaction'], $_GET['boclassicnonce'] ) ) {
+                return;
+            }
+
+            // Sanitize + verify nonce
+            $nonce = sanitize_text_field( wp_unslash( $_GET['boclassicnonce'] ) );
+            if ( ! wp_verify_nonce( $nonce, 'boclassic_process_payment_action' ) ) {
+                EpayPaymentHelper::add_admin_notices(
+                        EpayPaymentHelper::ERROR,
+                        __( 'Security check failed.', 'epay-payment-solutions' )
+                );
+                return;
+            }
+
+            // Define a whitelist of allowed actions
+            $allowed_actions = array( 'capture', 'delete', 'refund' );
+
+            // Sanitize the requested action and validate it against the whitelist
+            // phpcs:ignore WordPress.Security.NonceVerification.Recommended, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+            $action_raw = wp_unslash( $_GET['boclassicaction'] );
+            $action     = sanitize_key( $action_raw );
+            if ( ! in_array( $action, $allowed_actions, true ) ) {
+                EpayPaymentHelper::add_admin_notices(
+                        EpayPaymentHelper::ERROR,
+                        __( 'Unsupported action.', 'epay-payment-solutions' )
+                );
+                return;
+            }
+
+            // Determine order ID safely from "post" or "id"
+            $order_id = 0;
+            if ( isset( $_GET['post'] ) ) {
+                $order_id = absint( $_GET['post'] );
+            } elseif ( isset( $_GET['id'] ) ) {
+                $order_id = absint( $_GET['id'] );
+            }
+            if ( ! $order_id ) {
+                EpayPaymentHelper::add_admin_notices(
+                        EpayPaymentHelper::ERROR,
+                        __( 'Missing order ID.', 'epay-payment-solutions' )
+                );
+                return;
+            }
+
+            // Sanitize all GET parameters before passing them to the handler
+            $params[ 'boclassicnonce' ] = isset($_GET['boclassicnonce']) ? sanitize_text_field( wp_unslash( $_GET['boclassicnonce'] ) ) : false;
+            $params[ 'boclassicaction' ] = isset($_GET['boclassicaction']) ? sanitize_text_field( wp_unslash( $_GET['boclassicaction'] ) ) : false;
+            $params[ 'post' ] = isset($_GET['post']) ? sanitize_text_field( wp_unslash( $_GET['post'] ) ) : null;
+            $params[ 'id' ] = isset($_GET['id']) ? sanitize_text_field( wp_unslash( $_GET['id'] ) ) : null;
+            $params[ 'currency' ] = isset($_GET['currency']) ? sanitize_text_field( wp_unslash( $_GET['currency'] ) ) : false;
+            $params[ 'amount' ] = isset($_GET['amount']) ? sanitize_text_field( wp_unslash( $_GET['amount'] ) ) : false;
+
+            // Process the requested action
+            $result = $this->processEpayPaymentAction( $params );
+
+            // Handle error or success
+            if ( is_wp_error( $result ) ) {
+                $message = $result->get_error_message( 'epay_payment_error' );
+                $this->_boclassic_log->add( $message );
+                EpayPaymentHelper::add_admin_notices( EpayPaymentHelper::ERROR, $message );
+                return;
+            }
+
+            // Success message + redirect back to the order page
+            /* translators: 1: Action name (e.g. refund), 2: Order ID */
+            $message = sprintf( __( 'The %1$s action was a success for order %2$s', 'epay-payment-solutions' ), $action, $order_id );
+            EpayPaymentHelper::add_admin_notices( EpayPaymentHelper::SUCCESS, $message, true );
+
+            // Redirect back to the correct admin order view
+            global $post;
+            $url = isset( $post )
+                    ? admin_url( 'post.php?post=' . $order_id . '&action=edit' )
+                    : admin_url( 'admin.php?page=wc-orders&action=edit&id=' . $order_id );
+
+            wp_safe_redirect( $url );
+            exit;
+
 		}
 
 		/**
@@ -1135,7 +1268,7 @@ function init_epay_epic_payment() {
 		 *
 		 * @return bool
 		 */
-		protected function validate_epay_payment_action( $get_params, &$failed_message ) {
+		protected function validateEpayPaymentAction($get_params, &$failed_message ) {
 			$required_params = array(
 				'boclassicaction',
 				'currency',
@@ -1159,16 +1292,17 @@ function init_epay_epic_payment() {
 		 *
 		 * @return bool|WP_Error
 		 */
-		protected function process_epay_payment_action( $params ) {
+		protected function processEpayPaymentAction($params ) {
 			$failed_message = '';
-			if ( ! $this->validate_epay_payment_action( $params, $failed_message ) ) {
-				return new WP_Error( 'epay_payment_error', sprintf( __( 'The following get parameter was not provided "%s"' ), $failed_message ) );
+			if ( ! $this->validateEpayPaymentAction( $params, $failed_message ) ) {
+                /* translators: %s is the name of the missing GET parameter */
+				return new WP_Error( 'epay_payment_error', sprintf( __( 'The following get parameter was not provided "%s"', 'epay-payment-solutions' ), $failed_message ) );
 			}
 
 			try {
 				$order_id = $params['post'] ?? $params['id'];
 				if ( $order_id == null ) {
-					return new WP_Error( 'epay_payment_error', __( 'Both id and post were null' ) );
+					return new WP_Error( 'epay_payment_error', __( 'Both id and post were null', 'epay-payment-solutions' ) );
 				}
 				$currency = $params['currency'];
 				$action   = $params['boclassicaction'];
@@ -1176,20 +1310,20 @@ function init_epay_epic_payment() {
 
                 if (!$this->module_check( $order_id ) )
                 {
-					return new WP_Error( 'epay_payment_error', __( 'No payment module match' ) );
+					return new WP_Error( 'epay_payment_error', __( 'No payment module match', 'epay-payment-solutions' ) );
                 }
 
 				switch ( $action ) {
 					case 'capture':
-						$capture_result = $this->epay_payment_capture_payment( $order_id, $amount, $currency );
+						$capture_result = $this->epayPaymentCapturePayment( $order_id, $amount, $currency );
 
 						return $capture_result;
 					case 'refund':
-						$refund_result = $this->epay_payment_refund_payment( $order_id, $amount, $currency );
+						$refund_result = $this->epayPaymentRefundPayment( $order_id, $amount, $currency );
 
 						return $refund_result;
 					case 'delete':
-						$delete_result = $this->epay_payment_delete_payment( $order_id );
+						$delete_result = $this->epayPaymentDeletePayment( $order_id );
 
 						return $delete_result;
 				}
@@ -1210,45 +1344,42 @@ function init_epay_epic_payment() {
 		 *
 		 * @return bool|WP_Error
 		 */
-		public function epay_payment_capture_payment( $order_id, $amount, $currency ) {
+		public function epayPaymentCapturePayment( $order_id, $amount, $currency ) {
 
 			$order = wc_get_order( $order_id );
 			if ( empty( $currency ) ) {
 				$currency = $order->get_currency();
 			}
-			$minorunits           = Epay_EPIC_Payment_Helper::get_currency_minorunits( $currency );
+			$minorunits           = EpayPaymentHelper::get_currency_minorunits( $currency );
 			$amount               = str_replace( ',', '.', $amount );
-			$amount_in_minorunits = Epay_EPIC_Payment_Helper::convert_price_to_minorunits( $amount, $minorunits, $this->roundingmode );
-			$transaction_id       = Epay_EPIC_Payment_Helper::get_epay_payment_transaction_id( $order );
+			$amount_in_minorunits = EpayPaymentHelper::convert_price_to_minorunits( $amount, $minorunits, $this->roundingmode );
+			$transaction_id       = EpayPaymentHelper::getEpayPaymentTransactionId( $order );
 
 			if ( class_exists( 'sitepress' ) ) {
-				$merchant_number = Epay_EPIC_Payment_Helper::getWPMLOptionValue( "merchant", $this->merchant );
-				$remote_password = Epay_EPIC_Payment_Helper::getWPMLOptionValue( "remotepassword", $this->remotepassword );
-			} else {
-				$merchant_number = $this->merchant;
-				$remote_password = $this->remotepassword;
+                // $this->posid = EpayPaymentHelper::getWPMLOptionValue( "posid", $this->posid );
 			}
             
-            $webservice       = new Epay_EPIC_Payment_Soap( $remote_password, false, $this->apikey, $this->posid );
-			$capture_response = $webservice->capture( $merchant_number, $transaction_id, $amount_in_minorunits );
+            $epayPaymentApi = new EpayPaymentApi($this->apikey, $this->posid);
+            $captureResultJson = $epayPaymentApi->capture($transaction_id, $amount_in_minorunits);
 
-			if ( $capture_response->captureResult === true ) {
+            $captureResult = json_decode($captureResultJson, true);
 
-				do_action( 'epay_payment_after_capture', $order_id );
+            if(is_array($captureResult) && $captureResult['success'] == true) {
+                do_action( 'epay_payment_after_capture', $order_id );
 
+                $message = sprintf(__( 'Capture action completed successfully for order %s', 'epay-payment' ), $order_id );
+                $order->add_order_note( $message );
                 $order->payment_complete();
-				return true;
-			} else {
-				$message = sprintf( __( 'Capture action failed for order %s', 'epay-payment-solutions-epic' ), $order_id );
-				if ( $capture_response->epayresponse != '-1' ) {
-					$message .= ' - ' . $webservice->get_epay_error( $merchant_number, $capture_response->epayresponse );
-				} elseif ( $capture_response->pbsResponse != '-1' ) {
-					$message .= ' - ' . $webservice->get_pbs_error( $merchant_number, $capture_response->pbsResponse );
-				}
-				// $this->_boclassic_log->add( $message );
+                return true;
+            } else {
+                // translators: %s is the WooCommerce order ID
+                $message = sprintf( __( 'Capture action failed for order %s', 'epay-payment-solutions' ), $order_id );
+                $message .= ' - '.$captureResult['message'];
+                $order->add_order_note( $message );
+                // $this->_boclassic_log->add( $message );
 
-				return new WP_Error( 'epay_payment_error', $message );
-			}
+                return new WP_Error( 'epay_payment_error', $message );
+            }
 		}
 
 		/**
@@ -1260,7 +1391,7 @@ function init_epay_epic_payment() {
 		 *
 		 * @return bool|WP_Error
 		 */
-		public function epay_payment_refund_payment( $order_id, $amount, $currency ) {
+		public function epayPaymentRefundPayment($order_id, $amount, $currency ) {
 
 			$order = wc_get_order( $order_id );
 
@@ -1268,36 +1399,32 @@ function init_epay_epic_payment() {
 				$currency = $order->get_currency();
 			}
 
-			$minorunits           = Epay_EPIC_Payment_Helper::get_currency_minorunits( $currency );
+			$minorunits           = EpayPaymentHelper::get_currency_minorunits( $currency );
 			$amount               = str_replace( ',', '.', $amount );
-			$amount_in_minorunits = Epay_EPIC_Payment_Helper::convert_price_to_minorunits( $amount, $minorunits, $this->roundingmode );
-			$transaction_id       = Epay_EPIC_Payment_Helper::get_epay_payment_transaction_id( $order );
+			$amount_in_minorunits = EpayPaymentHelper::convert_price_to_minorunits( $amount, $minorunits, $this->roundingmode );
+			$transaction_id       = EpayPaymentHelper::getEpayPaymentTransactionId( $order );
 
 			if ( class_exists( 'sitepress' ) ) {
-				$merchant_number = Epay_EPIC_Payment_Helper::getWPMLOptionValue( "merchant", $this->merchant );
-				$remote_password = Epay_EPIC_Payment_Helper::getWPMLOptionValue( "remotepassword", $this->remotepassword );
-			} else {
-				$merchant_number = $this->merchant;
-				$remote_password = $this->remotepassword;
+                // $this->posid = EpayPaymentHelper::getWPMLOptionValue( "posid", $this->posid );
 			}
 
-			$webservice      = new Epay_EPIC_Payment_Soap( $remote_password, false, $this->apikey, $this->posid );
-			$refund_response = $webservice->refund( $merchant_number, $transaction_id, $amount_in_minorunits );
-			if ( $refund_response->creditResult === true ) {
-				do_action( 'epay_payment_after_refund', $order_id );
+            $epayPaymentApi = new EpayPaymentApi($this->apikey, $this->posid);
+            $refundResultJson = $epayPaymentApi->refund($transaction_id, $amount_in_minorunits);
+            $refundResult = json_decode($refundResultJson, true);
 
-				return true;
-			} else {
-				$message = sprintf( __( 'Refund action failed for order %s', 'epay-payment-solutions-epic' ), $order_id );
-				if ( $refund_response->epayresponse != '-1' ) {
-					$message .= ' - ' . $webservice->get_epay_error( $merchant_number, $refund_response->epayresponse );
-				} elseif ( $refund_response->pbsResponse != '-1' ) {
-					$message .= ' - ' . $webservice->get_pbs_error( $merchant_number, $refund_response->pbsResponse );
-				}
-				$this->_boclassic_log->add( $message );
+            if(is_array($refundResult) && $refundResult['success'] == true) {
+                do_action( 'epay_payment_after_refund', $order_id );
 
-				return new WP_Error( 'epay_payment_error', $message );
-			}
+                return true;
+            } else {
+                /* translators: %s is the WooCommerce order ID */
+                $message = sprintf( __( 'Refund action failed for order %s', 'epay-payment-solutions' ), $order_id );
+                $message .= ' - '.$refundResult['errorCode']['message'];
+
+                $this->_boclassic_log->add( $message );
+
+                return new WP_Error( 'epay_payment_error', $message );
+            }
 		}
 
 		/**
@@ -1307,33 +1434,31 @@ function init_epay_epic_payment() {
 		 *
 		 * @return bool|WP_Error
 		 */
-		public function epay_payment_delete_payment( $order_id ) {
+		public function epayPaymentDeletePayment($order_id ) {
 			$order          = wc_get_order( $order_id );
-			$transaction_id = Epay_EPIC_Payment_Helper::get_epay_payment_transaction_id( $order );
+			$transaction_id = EpayPaymentHelper::getEpayPaymentTransactionId( $order );
 
 			if ( class_exists( 'sitepress' ) ) {
-				$merchant_number = Epay_EPIC_Payment_Helper::getWPMLOptionValue( "merchant", $this->merchant );
-				$remote_password = Epay_EPIC_Payment_Helper::getWPMLOptionValue( "remotepassword", $this->remotepassword );
-			} else {
-				$merchant_number = $this->merchant;
-				$remote_password = $this->remotepassword;
+                // $this->posid = EpayPaymentHelper::getWPMLOptionValue( "posid", $this->posid );
 			}
 
-            $webservice      = new Epay_EPIC_Payment_Soap( $remote_password, false, $this->apikey, $this->posid );
-            $delete_response = $webservice->delete( $merchant_number, $transaction_id );
-            if ( $delete_response->deleteResult === true ) {
+            $epayPaymentApi = new EpayPaymentApi($this->apikey, $this->posid);
+            $deleteResultJson = $epayPaymentApi->void($transaction_id);
+            $deleteResult = json_decode($deleteResultJson, true);
+
+            if(is_array($deleteResult) && $deleteResult['success'] == true) {
                 do_action( 'epay_payment_after_delete', $order_id );
 
                 return true;
             } else {
-                $message = sprintf( __( 'Delete action failed for order %s', 'epay-payment-solutions-epic' ), $order_id );
-                if ( $delete_response->epayresponse != '-1' ) {
-                    $message .= ' - ' . $webservice->get_epay_error( $merchant_number, $delete_response->epayresponse );
-                }
+                /* translators: %s is the WooCommerce order ID */
+                $message = sprintf( __( 'Delete action failed for order %s', 'epay-payment-solutions' ), $order_id );
+                $message .= ' - '.$refundResult['errorCode']['message'];
+
                 $this->_boclassic_log->add( $message );
 
                 return new WP_Error( 'epay_payment_error', $message );
-            }        
+            }
         }
 
 		/**
@@ -1344,9 +1469,9 @@ function init_epay_epic_payment() {
 		public function add_subscription_payment_meta( $payment_meta, $subscription ) {
 			$payment_meta[ $this->id ] = array(
 				'post_meta' => array(
-					Epay_EPIC_Payment_Helper::EPAY_PAYMENT_SUBSCRIPTION_ID => array(
-						'value'    => Epay_EPIC_Payment_Helper::get_epay_payment_subscription_id( $subscription ),
-						'label'    => __( 'ePay subscription token', 'epay-payment-solutions-epic' ),
+					EpayPaymentHelper::EPAY_PAYMENT_SUBSCRIPTION_ID => array(
+						'value'    => EpayPaymentHelper::get_epay_payment_subscription_id( $subscription ),
+						'label'    => __( 'ePay subscription token', 'epay-payment-solutions' ),
 						'disabled' => false,
 					),
 				),
@@ -1358,7 +1483,7 @@ function init_epay_epic_payment() {
 		/**
 		 * Add ePay Payment Meta boxes
 		 */
-		public function epay_epic_payment_meta_boxes() {
+		public function epayPaymentMetaBoxes() {
 			global $post;
 			if ( ! isset( $post ) ) { //HPOS might be used
 				$order = wc_get_order();
@@ -1382,7 +1507,7 @@ function init_epay_epic_payment() {
 			add_meta_box(
 				'epay-payment-actions',
 				'ePay Payment Solutions',
-				array( &$this, 'epay_payment_meta_box_payment' ),
+				array( &$this, 'epayPaymentMetaBoxPayment'),
 				'shop_order',
 				'side',
 				'high'
@@ -1390,7 +1515,7 @@ function init_epay_epic_payment() {
 			add_meta_box(
 				'epay-payment-actions',
 				'ePay Payment Solutions',
-				array( &$this, 'epay_payment_meta_box_payment' ),
+				array( &$this, 'epayPaymentMetaBoxPayment'),
 				'woocommerce_page_wc-orders',
 				'side',
 				'high'
@@ -1401,7 +1526,7 @@ function init_epay_epic_payment() {
 		/**
 		 * Create the ePay Payment Meta Box
 		 */
-		public function epay_payment_meta_box_payment() {
+		public function epayPaymentMetaBoxPayment() {
 			global $post;
 			$html = '';
 			try {
@@ -1413,22 +1538,25 @@ function init_epay_epic_payment() {
 					$order    = wc_get_order( $order_id );
 				}
 				if ( ! empty( $order ) ) {
-					$transaction_id = Epay_EPIC_Payment_Helper::get_epay_payment_transaction_id( $order );
+					$transaction_id = EpayPaymentHelper::getEpayPaymentTransactionId( $order );
 					if ( strlen( $transaction_id ) > 0 ) {
-						$html = $this->epay_payment_meta_box_payment_html( $order, $transaction_id );
+						$html = $this->epayPaymentMetaBoxPaymentHtml( $order, $transaction_id );
 					} else {
-						$html = sprintf( __( 'No transaction was found for order %s', 'epay-payment-solutions-epic' ), $order_id );
+                        /* translators: %s is the WooCommerce order ID */
+						$html = sprintf( __( 'No transaction was found for order %s', 'epay-payment-solutions' ), $order_id );
 						$this->_boclassic_log->add( $html );
 					}
 				} else {
-					$html = sprintf( __( 'The order with id %s could not be loaded', 'epay-payment-solutions-epic' ), $order_id );
+                    /* translators: %s is the WooCommerce order ID */
+					$html = sprintf( __( 'The order with id %s could not be loaded', 'epay-payment-solutions' ), $order_id );
 					$this->_boclassic_log->add( $html );
 				}
 			} catch ( Exception $ex ) {
 				$html = $ex->getMessage();
 				$this->_boclassic_log->add( $html );
 			}
-			echo ent2ncr( $html );
+
+            echo wp_kses( $html, EpayPaymentHelper::get_allowed_tags() );
 		}
 
 		/**
@@ -1439,39 +1567,36 @@ function init_epay_epic_payment() {
 		 *
 		 * @return string
 		 */
-		protected function epay_payment_meta_box_payment_html( $order, $transaction_id ) {
+		protected function epayPaymentMetaBoxPaymentHtml($order, $transaction_id ) {
 			try {
-				$html = '';
+
 				if ( class_exists( 'sitepress' ) ) {
-					$merchant_number = Epay_EPIC_Payment_Helper::getWPMLOptionValue( "merchant", $this->merchant );
-					$remote_password = Epay_EPIC_Payment_Helper::getWPMLOptionValue( "remotepassword", $this->remotepassword );
-				} else {
-					$merchant_number = $this->merchant;
-					$remote_password = $this->remotepassword;
+                    // $this->posid = EpayPaymentHelper::getWPMLOptionValue( "posid", $this->posid );
 				}
 
-                $webservice               = new Epay_EPIC_Payment_Soap( $remote_password, false, $this->apikey, $this->posid );
-                $get_transaction_response = $webservice->get_transaction( $merchant_number, $transaction_id );
-                if ( $get_transaction_response->gettransactionResult === false ) {
-                    $html = __( 'Get Transaction action failed', 'epay-payment-solutions-epic' );
-                    if ( $get_transaction_response->epayresponse != '-1' ) {
-                        $html .= ' - ' . $webservice->get_epay_error( $merchant_number, $get_transaction_response->epayresponse );
-                    }
+                $epayPaymentApi = new EpayPaymentApi($this->apikey, $this->posid);
+                $transactionResultJson = $epayPaymentApi->payment_info($transaction_id);
+                $transactionResult = json_decode($transactionResultJson);
+
+                if(!isset($transactionResult->transaction->id)) {
+                    $html = __( 'Get Transaction action failed', 'epay-payment-solutions' );
+                    $html .= ' - '.$$transactionResult->errorCode;
                     return $html;
                 }
-                $transaction   = $get_transaction_response->transactionInformation;
+
+                $transaction   = $transactionResult;
 
                 $currency_code = $transaction->currency;
-				$currency      = Epay_EPIC_Payment_Helper::get_iso_code( $currency_code, false );
-				$minorunits    = Epay_EPIC_Payment_Helper::get_currency_minorunits( $currency );
+				$currency      = EpayPaymentHelper::get_iso_code( $currency_code, false );
+				$minorunits    = EpayPaymentHelper::get_currency_minorunits( $currency );
 
-				$total_authorized      = Epay_EPIC_Payment_Helper::convert_price_from_minorunits( $transaction->authamount, $minorunits );
-				$total_captured        = Epay_EPIC_Payment_Helper::convert_price_from_minorunits( $transaction->capturedamount, $minorunits );
-				$total_credited        = Epay_EPIC_Payment_Helper::convert_price_from_minorunits( $transaction->creditedamount, $minorunits );
+				$total_authorized      = EpayPaymentHelper::convert_price_from_minorunits( $transaction->authamount, $minorunits );
+				$total_captured        = EpayPaymentHelper::convert_price_from_minorunits( $transaction->capturedamount, $minorunits );
+				$total_credited        = EpayPaymentHelper::convert_price_from_minorunits( $transaction->creditedamount, $minorunits );
 				$available_for_capture = $total_authorized - $total_captured;
 				$transaction_status    = $transaction->status;
 
-				// $card_info     = Epay_EPIC_Payment_Helper::get_cardtype_groupid_and_name( $transaction->cardtypeid );
+				// $card_info     = EpayPaymentHelper::get_cardtype_groupid_and_name( $transaction->cardtypeid );
 				// $card_group_id = $card_info[1];
 				// $card_name     = $card_info[0];
 
@@ -1491,33 +1616,33 @@ function init_epay_epic_payment() {
 				$html = '<div class="boclassic-info">';
 				// if ( isset( $card_group_id ) && $card_group_id != '-1' ) {
                     
-                    $html .= '<img class="boclassic-paymenttype-img" src="'.esc_url(Epay_EPIC_Payment_Helper::get_card_logourl_by_type($transaction->paymentMethodSubType)).'">';
+                    $html .= '<img class="boclassic-paymenttype-img" src="'.esc_url(EpayPaymentHelper::get_card_logourl_by_type($transaction->paymentMethodSubType)).'">';
 
                     if($transaction->paymentMethodType != "CARD")
                     {
-                        $html .= '<img class="boclassic-paymenttype-img" src="'.esc_url(Epay_EPIC_Payment_Helper::get_card_logourl_by_type($transaction->paymentMethodType)).'">';
+                        $html .= '<img class="boclassic-paymenttype-img" src="'.esc_url(EpayPaymentHelper::get_card_logourl_by_type($transaction->paymentMethodType)).'">';
                     }
 				// }
 
 				$html .= '<div class="boclassic-transactionid">';
-				$html .= '<p>' . __( 'Transaction ID', 'epay-payment-solutions-epic' ) . '</p>';
+				$html .= '<p>' . __( 'Transaction ID', 'epay-payment-solutions' ) . '</p>';
 				$html .= '<p>' . $transaction->transactionid . '</p>';
 				$html .= '</div>';
 				$html .= '<div class="boclassic-paymenttype">';
-				$html .= '<p>' . __( 'Payment Type', 'epay-payment-solutions-epic' ) . '</p>';
-				$html .= '<p>' . Epay_EPIC_Payment_Helper::get_card_name_by_type($transaction->paymentMethodSubType) . '</p>';
+				$html .= '<p>' . __( 'Payment Type', 'epay-payment-solutions' ) . '</p>';
+				$html .= '<p>' . EpayPaymentHelper::get_card_name_by_type($transaction->paymentMethodSubType) . '</p>';
 				$html .= '</div>';
 
 				$html .= '<div class="boclassic-info-overview">';
-				$html .= '<p>' . __( 'Authorized:', 'epay-payment-solutions-epic' ) . '</p>';
+				$html .= '<p>' . __( 'Authorized:', 'epay-payment-solutions' ) . '</p>';
 				$html .= '<p>' . wc_format_localized_price( $total_authorized ) . ' ' . $currency . '</p>';
 				$html .= '</div>';
 				$html .= '<div class="boclassic-info-overview">';
-				$html .= '<p>' . __( 'Captured:', 'epay-payment-solutions-epic' ) . '</p>';
+				$html .= '<p>' . __( 'Captured:', 'epay-payment-solutions' ) . '</p>';
 				$html .= '<p>' . wc_format_localized_price( $total_captured ) . ' ' . $currency . '</p>';
 				$html .= '</div>';
 				$html .= '<div class="boclassic-info-overview">';
-				$html .= '<p>' . __( 'Refunded:', 'epay-payment-solutions-epic' ) . '</p>';
+				$html .= '<p>' . __( 'Refunded:', 'epay-payment-solutions' ) . '</p>';
 				$html .= '<p>' . wc_format_localized_price( $total_credited ) . ' ' . $currency . '</p>';
 				$html .= '</div>';
 				$html .= '</div>';
@@ -1528,76 +1653,79 @@ function init_epay_epic_payment() {
 					$html .= '<input type="hidden" id="boclassic-currency" name="boclassic-currency" value="' . $currency . '">';
 					wp_nonce_field( 'boclassic_process_payment_action', 'boclassicnonce' );
 					if ( $transaction_status === 'PAYMENT_NEW' ) {
-						$html .= '<input type="hidden" id="boclassic-capture-message" name="boclassic-capture-message" value="' . __( 'Are you sure you want to capture the payment?', 'epay-payment-solutions-epic' ) . '" />';
+						$html .= '<input type="hidden" id="boclassic-capture-message" name="boclassic-capture-message" value="' . __( 'Are you sure you want to capture the payment?', 'epay-payment-solutions' ) . '" />';
 						$html .= '<div class="boclassic-action">';
 
 						if ( $canCaptureRefundDelete ) {
 							$html .= '<p>' . $currency . '</p>';
 							$html .= '<input type="text" value="' . $available_for_capture . '" id="boclassic-capture-amount" class="boclassic-amount" name="boclassic-amount" />';
-							$html .= '<input id="epay-capture-submit" class="button capture" name="boclassic-capture" type="submit" value="' . __( 'Capture', 'epay-payment-solutions-epic' ) . '" />';
+							$html .= '<input id="epay-capture-submit" class="button capture" name="boclassic-capture" type="submit" value="' . __( 'Capture', 'epay-payment-solutions' ) . '" />';
 						} else {
-							$html .= __( 'Your role cannot capture or delete the payment', 'epay-payment-solutions-epic' );
+							$html .= __( 'Your role cannot capture or delete the payment', 'epay-payment-solutions' );
 						}
 						$html .= '</div>';
 						$html .= '<br />';
 						if ( $total_captured === 0 ) {
-							$html .= '<input type="hidden" id="boclassic-delete-message" name="boclassic-delete-message" value="' . __( 'Are you sure you want to delete the payment?', 'epay-payment-solutions-epic' ) . '" />';
+							$html .= '<input type="hidden" id="boclassic-delete-message" name="boclassic-delete-message" value="' . __( 'Are you sure you want to delete the payment?', 'epay-payment-solutions' ) . '" />';
 							$html .= '<div class="boclassic-action">';
 							if ( $canCaptureRefundDelete ) {
-								$html .= '<input id="epay-delete-submit" class="button delete" name="boclassic-delete" type="submit" value="' . __( 'Delete', 'epay-payment-solutions-epic' ) . '" />';
+								$html .= '<input id="epay-delete-submit" class="button delete" name="boclassic-delete" type="submit" value="' . __( 'Delete', 'epay-payment-solutions' ) . '" />';
 							}
 							$html .= '</div>';
 						}
 					} elseif ( $transaction_status === 'PAYMENT_CAPTURED' && $total_credited === 0 ) {
-						$html .= '<input type="hidden" id="boclassic-refund-message" name="boclassic-refund-message" value="' . __( 'Are you sure you want to refund the payment?', 'epay-payment-solutions-epic' ) . '" />';
+						$html .= '<input type="hidden" id="boclassic-refund-message" name="boclassic-refund-message" value="' . __( 'Are you sure you want to refund the payment?', 'epay-payment-solutions' ) . '" />';
 						$html .= '<div class="boclassic-action">';
 						$html .= '<p>' . $currency . '</p>';
 						$html .= '<input type="text" value="' . $total_captured . '" id="boclassic-refund-amount" class="boclassic-amount" name="boclassic-amount" />';
 						if ( $canCaptureRefundDelete ) {
-							$html .= '<input id="epay-refund-submit" class="button refund" name="boclassic-refund" type="submit" value="' . __( 'Refund', 'epay-payment-solutions-epic' ) . '" />';
+							$html .= '<input id="epay-refund-submit" class="button refund" name="boclassic-refund" type="submit" value="' . __( 'Refund', 'epay-payment-solutions' ) . '" />';
 						}
 						$html .= '</div>';
 						$html .= '<br />';
 					}
 					$html            .= '</div>';
-					$warning_message = __( 'The amount you entered was in the wrong format.', 'epay-payment-solutions-epic' );
+					$warning_message = __( 'The amount you entered was in the wrong format.', 'epay-payment-solutions' );
 
-					$html .= '<div id="boclassic-format-error" class="boclassic boclassic-error"><strong>' . __( 'Warning', 'epay-payment-solutions-epic' ) . ' </strong>' . $warning_message . '<br /><strong>' . __( 'Correct format is: 1234.56', 'epay-payment-solutions-epic' ) . '</strong></div>';
+					$html .= '<div id="boclassic-format-error" class="boclassic boclassic-error"><strong>' . __( 'Warning', 'epay-payment-solutions' ) . ' </strong>' . $warning_message . '<br /><strong>' . __( 'Correct format is: 1234.56', 'epay-payment-solutions' ) . '</strong></div>';
 
 				}
 
-				$history_array = $transaction->history->TransactionHistoryInfo;
+                if(isset($transaction->history->TransactionHistoryInfo)) {
+                    $history_array = $transaction->history->TransactionHistoryInfo;
 
-				if ( isset( $history_array ) && ! is_array( $history_array ) ) {
-					$history_array = array( $history_array );
-				}
+                    if (isset($history_array) && !is_array($history_array)) {
+                        $history_array = array($history_array);
+                    }
 
-				// Sort the history array based on when the history event is created
-				$history_created = array();
-				foreach ( $history_array as $history ) {
-					$history_created[] = $history->created;
-				}
-				array_multisort( $history_created, SORT_ASC, $history_array );
+                    // Sort the history array based on when the history event is created
+                    $history_created = array();
+                    foreach ($history_array as $history) {
+                        $history_created[] = $history->created;
+                    }
+                    array_multisort($history_created, SORT_ASC, $history_array);
 
-				if ( count( $history_array ) > 0 ) {
-					$html .= '<h4>' . __( 'TRANSACTION HISTORY', 'epay-payment-solutions-epic' ) . '</h4>';
-					$html .= '<table class="boclassic-table">';
+                    if (count($history_array) > 0) {
+                        $html .= '<h4>' . __('TRANSACTION HISTORY', 'epay-payment-solutions') . '</h4>';
+                        $html .= '<table class="boclassic-table">';
 
-					foreach ( $history_array as $history ) {
-						$html .= '<tr class="boclassic-transaction-row-header">';
-						$html .= '<td>' . Epay_EPIC_Payment_Helper::format_date_time( $history->created ) . '</td>';
-						$html .= '</tr>';
-						if ( strlen( $history->username ) > 0 ) {
-							$html .= '<tr class="boclassic-transaction-row-header boclassic-transaction-row-header-user">';
-							$html .= '<td>' . sprintf( __( 'By: %s', 'epay-payment-solutions-epic' ), $history->username ) . '</td>';
-							$html .= '</tr>';
-						}
-						$html .= '<tr class="boclassic-transaction">';
-						$html .= '<td>' . $history->eventMsg . '</td>';
-						$html .= '</tr>';
-					}
-					$html .= '</table>';
-				}
+                        foreach ($history_array as $history) {
+                            $html .= '<tr class="boclassic-transaction-row-header">';
+                            $html .= '<td>' . EpayPaymentHelper::format_date_time($history->created) . '</td>';
+                            $html .= '</tr>';
+                            if (strlen($history->username) > 0) {
+                                $html .= '<tr class="boclassic-transaction-row-header boclassic-transaction-row-header-user">';
+                                /* translators: %s ePay username */
+                                $html .= '<td>' . sprintf(__('By: %s', 'epay-payment-solutions'), $history->username) . '</td>';
+                                $html .= '</tr>';
+                            }
+                            $html .= '<tr class="boclassic-transaction">';
+                            $html .= '<td>' . $history->eventMsg . '</td>';
+                            $html .= '</tr>';
+                        }
+                        $html .= '</table>';
+                    }
+                }
 
 				return $html;
 			} catch ( Exception $ex ) {
@@ -1640,19 +1768,19 @@ function init_epay_epic_payment() {
 
             // TODO
             $allicons = [
-                'epay'           => plugins_url('epay-logo.svg', __FILE__),
-                'visa'           => plugins_url('images/visa.svg', __FILE__),
-                'mastercard'     => plugins_url('images/mastercard.svg', __FILE__),
-                'americanexpress'=> plugins_url('images/american_express.svg', __FILE__),
-                'dinersclub'     => plugins_url('images/diners_club.svg', __FILE__),
-                'ideal'          => plugins_url('images/ideal.svg', __FILE__),
-                'jcb'            => plugins_url('images/jcb.svg', __FILE__),
-                'maestro'        => plugins_url('images/maestro.svg', __FILE__),
-                'visa'           => plugins_url('images/visa.svg', __FILE__),
-                'dankort'        => plugins_url('images/dankort.svg', __FILE__),
-                'applepay'       => plugins_url('images/applepay.svg', __FILE__),
-                'mobilepay'      => plugins_url('images/mobilepay.svg', __FILE__),
-                'googlepay'      => plugins_url('images/googlepay.svg', __FILE__),
+                'epay'           => EPAY_PLUGIN_URL . 'epay-logo.svg',
+                'visa'           => EPAY_PLUGIN_URL . 'images/visa.svg',
+                'mastercard'     => EPAY_PLUGIN_URL . 'images/mastercard.svg',
+                'americanexpress'=> EPAY_PLUGIN_URL . 'images/american_express.svg',
+                'dinersclub'     => EPAY_PLUGIN_URL . 'images/diners_club.svg',
+                'ideal'          => EPAY_PLUGIN_URL . 'images/ideal.svg',
+                'jcb'            => EPAY_PLUGIN_URL . 'images/jcb.svg',
+                'maestro'        => EPAY_PLUGIN_URL . 'images/maestro.svg',
+                'visa'           => EPAY_PLUGIN_URL . 'images/visa.svg',
+                'dankort'        => EPAY_PLUGIN_URL . 'images/dankort.svg',
+                'applepay'       => EPAY_PLUGIN_URL . 'images/applepay.svg',
+                'mobilepay'      => EPAY_PLUGIN_URL . 'images/mobilepay.svg',
+                'googlepay'      => EPAY_PLUGIN_URL . 'images/googlepay.svg',
             ];
 
             if(preg_match("/epay-logo\.svg/", $this->icon) && is_array($selected_icons) && count($selected_icons))
@@ -1664,16 +1792,17 @@ function init_epay_epic_payment() {
                 }
             }
 
+            // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound
             return apply_filters( 'woocommerce_gateway_icon', $icon_html, $this->id );
         }
 
         public static function load_subgates($methods) {
-            require_once( EPAYEPIC_PATH .'/lib/subgates/subgate.php' );
+            require_once EPAY_PLUGIN_DIR . 'lib/subgates/subgate.php';
 
             $subgates = self::get_subgates();
 
             foreach($subgates AS $file_name => $class_name) {
-                $file_path = EPAYEPIC_PATH . '/lib/subgates/' .$file_name. '.php';
+                $file_path = EPAY_PLUGIN_DIR . 'lib/subgates/subgate.php';
 
                 if( file_exists( $file_path ) ) {
                     require_once($file_path);
@@ -1686,12 +1815,12 @@ function init_epay_epic_payment() {
 
         public static function get_subgates() {
             return [
-                // "mobilepay" => 'Epay_EPIC_MobilePay',
-                // "applepay" => 'Epay_EPIC_ApplePay',
-                // "viabill" => 'Epay_EPIC_ViaBill',
-                // "paypal" => 'Epay_EPIC_PayPal',
-                // "klarna" => 'Epay_EPIC_Klarna',
-                // "ideal" => 'Epay_EPIC_iDEAL',
+                // "mobilepay" => 'EpayPaymentMobilePay',
+                // "applepay" => 'EpayPaymentApplePay',
+                // "viabill" => 'EpayPaymentViaBill',
+                // "paypal" => 'EpayPaymentPayPal',
+                // "klarna" => 'EpayPaymentKlarna',
+                // "ideal" => 'EpayPaymentIdeal',
             ];
         }
 
@@ -1715,38 +1844,33 @@ function init_epay_epic_payment() {
         }
 	}
 
-    function WC_EP_EPIC(): Epay_EPIC_Payment {
-        return Epay_EPIC_Payment::get_instance();
+    function epayPaymentInstance(): EpayPayment {
+        return EpayPayment::get_instance();
     }
 
-    WC_EP_EPIC();
-    WC_EP_EPIC()->init_hooks();
-	// Epay_EPIC_Payment::get_instance()->init_hooks();
-
+    epayPaymentInstance();
+    epayPaymentInstance()->init_hooks();
 
 	/**
 	 * Add the Gateway to WooCommerce
 	 **/
-	function add_epay_epic_payment_woocommerce( $methods ) {
-		$methods[] = 'Epay_EPIC_Payment';
+	function epayPaymentAddPaymentWoocommerce( $methods ) {
+		$methods[] = 'EpayPayment';
 
-		return Epay_EPIC_Payment::load_subgates($methods);
+		return EpayPayment::load_subgates($methods);
 	}
 
-	add_filter( 'woocommerce_payment_gateways', 'add_epay_epic_payment_woocommerce' );
+	add_filter( 'woocommerce_payment_gateways', 'epayPaymentAddPaymentWoocommerce' );
 
-	$plugin_dir = basename( dirname( __FILE__ ) );
-	load_plugin_textdomain( 'epay-payment-solutions-epic', false, $plugin_dir . '/languages' );
 
-    /*
-	add_action( 'before_woocommerce_init', function () {
-		if ( class_exists( FeaturesUtil::class ) ) {
-		    FeaturesUtil::declare_compatibility( 'custom_order_tables', __FILE__, true );
-		}
-	} );
-    */
+    add_action( 'before_woocommerce_init', function () {
+        if ( class_exists( FeaturesUtil::class ) ) {
+            FeaturesUtil::declare_compatibility( 'custom_order_tables', __FILE__, true );
+        }
+    } );
 
-    function epic_declare_cart_checkout_blocks_compatibility() {
+
+    function epayPaymentDeclareCartCheckoutBlocksCompatibility() {
         
         // Check if the required class exists
         if (class_exists('\Automattic\WooCommerce\Utilities\FeaturesUtil')) {
@@ -1756,11 +1880,11 @@ function init_epay_epic_payment() {
     }
         
     // Hook the custom function to the 'before_woocommerce_init' action
-    add_action('before_woocommerce_init', 'epic_declare_cart_checkout_blocks_compatibility');
+    add_action('before_woocommerce_init', 'epayPaymentDeclareCartCheckoutBlocksCompatibility');
 
 
     // Hook the custom function to the 'woocommerce_blocks_loaded' action
-    add_action( 'woocommerce_blocks_loaded', 'epic_register_order_approval_payment_method_type' );
+    add_action( 'woocommerce_blocks_loaded', 'epayPaymentRegisterOrderApprovalPaymentMethodType' );
 
     /**
     * Custom function to register a payment method type
@@ -1768,17 +1892,14 @@ function init_epay_epic_payment() {
     */
 
 
-
-
-
-    function epic_register_order_approval_payment_method_type() {
+    function epayPaymentRegisterOrderApprovalPaymentMethodType() {
         // Check if the required class exists
         if ( ! class_exists( 'Automattic\WooCommerce\Blocks\Payments\Integrations\AbstractPaymentMethodType' ) ) {
             return;
         }
 
         // Include the custom Blocks Checkout class
-        require_once plugin_dir_path(__FILE__) . 'epay-payment-block.php';
+        require_once EPAY_PLUGIN_DIR . 'epay-payment-block.php';
 
         // Hook the registration function to the 'woocommerce_blocks_payment_method_type_registration' action
         add_action(
@@ -1787,7 +1908,7 @@ function init_epay_epic_payment() {
                 // Register an instance of My_Custom_Gateway_Blocks
                 foreach( wc()->payment_gateways()->payment_gateways() as $payment_gateway )
                 {
-                    if($payment_gateway instanceof Epay_EPIC_Payment)
+                    if($payment_gateway instanceof EpayPayment)
                     {
                         $payment_method_registry->register( new Epay_EPIC_Payment_Blocks($payment_gateway) );
                     }
@@ -1797,92 +1918,139 @@ function init_epay_epic_payment() {
     }
 
 
-
-
-
-
-
     /*
     * Display Age Verification Product Fields
     */
-    function ep_epic_ageverification_add_product_field()
+    function epayPaymentAgeverificationAddProductField()
     {
+        global $post;
+
+        wp_nonce_field( 'ep_ageverification_save', 'ep_ageverification_nonce' );
+
         return woocommerce_wp_select(
             array(
                 'id'      => 'ageverification',
-                'label'   => __( 'Ageverification', 'woocommerce' ),
-                'options' => Epay_EPIC_Payment_Helper::get_ageverification_options()
+                'label'   => __( 'Ageverification', 'epay-payment-solutions' ),
+                'options' => EpayPaymentHelper::get_ageverification_options(),
+                'value'   => get_post_meta( $post->ID, 'ageverification', true ),
             )
         );
     }
-    add_action( 'woocommerce_product_options_general_product_data', 'ep_epic_ageverification_add_product_field' );
+    add_action( 'woocommerce_product_options_general_product_data', 'epayPaymentAgeverificationAddProductField', 10 );
 
     // Save Ageverification
-    function save_ep_epic_ageverification_product( $post_id ){
-        if( isset($_POST['ageverification']))
-        {
-            $value = sanitize_text_field( wp_unslash( $_POST['ageverification'] ) );
-            update_post_meta( $post_id, 'ageverification', $value);
+    function epayPaymentSaveAgeverificationProduct( $post_id ){
+
+        if ( 'product' !== get_post_type( $post_id ) ) {
+            return;
         }
+
+        if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) {
+            return;
+        }
+
+        if ( ! isset( $_POST['ep_ageverification_nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['ep_ageverification_nonce'] ) ), 'ep_ageverification_save' )) {
+            return;
+        }
+
+        if ( ! current_user_can( 'edit_post', $post_id ) ) {
+            return;
+        }
+
+        $value = isset( $_POST['ageverification'] )
+                ? sanitize_text_field( wp_unslash( $_POST['ageverification'] ) )
+                : '';
+
+        if ( '' === $value ) {
+            delete_post_meta( $post_id, 'ageverification' );
+        } else {
+            update_post_meta( $post_id, 'ageverification', $value );
+        }
+
     }
-    add_action( 'woocommerce_process_product_meta', 'save_ep_epic_ageverification_product' );
+    add_action( 'woocommerce_process_product_meta', 'epayPaymentSaveAgeverificationProduct' );
 
     /*
     * Display Age Verification Category Fields
     */
-    add_action('product_cat_add_form_fields', 'ep_epic_ageverification_add_category_field', 10, 1);
-    add_action('product_cat_edit_form_fields', 'ep_epic_ageverification_edit_category_field', 10, 1);
+    add_action('product_cat_add_form_fields', 'epayPaymentAgeverificationAddCategoryField', 10);
+    add_action('product_cat_edit_form_fields', 'epayPaymentAgeverificationEditCategoryField', 10, 1);
     
     //Product Cat Create page
-    function ep_epic_ageverification_add_category_field() {
+    function epayPaymentAgeverificationAddCategoryField() {
+        $ep_category_ageverification = '';
+
+        wp_nonce_field( 'ep_cat_ageverification_save', 'ep_cat_ageverification_nonce' );
         ?>
         <div class="form-field">
-            <label for="ep_category_ageverification">Ageverification</label>
-            <select name="ep_category_ageverification" id="ep_category_ageverification" >
+            <label for="ep_category_ageverification"><?php esc_html_e( 'Ageverification', 'epay-payment-solutions' ); ?></label>
 
-            <?php
-            foreach(Epay_EPIC_Payment_Helper::get_ageverification_options() AS $key => $option)
-            {
-                echo '<option value="'.esc_attr($key).'" '.($key==$ep_category_ageverification ? "selected" : "").'>'.esc_html($option).'</option>';
-            }
-            ?>
+            <select name="ep_category_ageverification" id="ep_category_ageverification">
+                <?php foreach ( EpayPaymentHelper::get_ageverification_options() as $key => $option ) : ?>
+                    <option value="<?php echo esc_attr( $key ); ?>" <?php selected( $key, $ep_category_ageverification ); ?>>
+                        <?php echo esc_html( $option ); ?>
+                    </option>
+                <?php endforeach; ?>
             </select>
 
-            <p class="description">Activate ageverification on category</p>
+            <p class="description"><?php esc_html_e( 'Activate ageverification on category', 'epay-payment-solutions' ); ?></p>
         </div>
         <?php
     }
 
-    function ep_epic_ageverification_edit_category_field($term) {
+    function epayPaymentAgeverificationEditCategoryField($term) {
 
         $term_id = $term->term_id;
+        $ep_category_ageverification = get_term_meta( $term_id, 'ep_category_ageverification', true );
 
-        $ep_category_ageverification = get_term_meta($term_id, 'ep_category_ageverification', true);
+        // Nonce til taxonomy-save
+        wp_nonce_field( 'ep_cat_ageverification_save', 'ep_cat_ageverification_nonce' );
         ?>
-
         <tr class="form-field">
-            <th scope="row" valign="top"><label for="ep_category_ageverification">Ageverification</label></th>
+            <th scope="row" valign="top">
+                <label for="ep_category_ageverification"><?php esc_html_e( 'Ageverification', 'epay-payment-solutions' ); ?></label>
+            </th>
             <td>
-                <select name="ep_category_ageverification" id="ep_category_ageverification" >
-                <?php
-                foreach(Epay_EPIC_Payment_Helper::get_ageverification_options() AS $key => $option)
-                {
-                    echo '<option value="'.esc_attr($key).'" '.($key==$ep_category_ageverification ? "selected" : "").'>'.esc_html($option).'</option>';
-                }
-                ?>
+                <select name="ep_category_ageverification" id="ep_category_ageverification">
+                    <?php foreach ( EpayPaymentHelper::get_ageverification_options() as $key => $option ) : ?>
+                        <option value="<?php echo esc_attr( $key ); ?>" <?php selected( $key, $ep_category_ageverification ); ?>>
+                            <?php echo esc_html( $option ); ?>
+                        </option>
+                    <?php endforeach; ?>
                 </select>
-                <p class="description">Activate ageverification category</p>
+
+                <p class="description"><?php esc_html_e( 'Activate ageverification category', 'epay-payment-solutions' ); ?></p>
             </td>
         </tr>
         <?php
     }
 
-    add_action('edited_product_cat', 'save_ep_epic_ageverification_category', 10, 1);
-    add_action('create_product_cat', 'save_ep_epic_ageverification_category', 10, 1);
+    add_action('create_product_cat', 'epayPaymentSaveAgeverificationCategory', 10, 1);
+    add_action('edited_product_cat', 'epayPaymentSaveAgeverificationCategory', 10, 1);
 
     // Save extra taxonomy fields callback function.
-    function save_ep_epic_ageverification_category($term_id) {
-        $ep_category_ageverification = filter_input(INPUT_POST, 'ep_category_ageverification');
-        update_term_meta($term_id, 'ep_category_ageverification', $ep_category_ageverification);
+    function epayPaymentSaveAgeverificationCategory($term_id) {
+
+        if ( empty( $_POST ) ) {
+            return;
+        }
+
+        if ( ! isset( $_POST['ep_cat_ageverification_nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['ep_cat_ageverification_nonce'] ) ), 'ep_cat_ageverification_save' )) {
+            return;
+        }
+
+        if ( ! current_user_can( 'manage_product_terms' ) ) {
+            return;
+        }
+
+        $value = isset( $_POST['ep_category_ageverification'] )
+                ? sanitize_text_field( wp_unslash( $_POST['ep_category_ageverification'] ) )
+                : '';
+
+        if ( $value === '' ) {
+            delete_term_meta( $term_id, 'ep_category_ageverification' );
+        } else {
+            update_term_meta( $term_id, 'ep_category_ageverification', $value );
+        }
     }
 }

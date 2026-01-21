@@ -15,7 +15,7 @@
 /**
  * ePay Online Checkout Log
  */
-class Epay_EPIC_Payment_Log {
+class EpayPaymentLog {
 
 	/* The domain handler used to name the log */
 	private $_domain = 'epay-payment';

@@ -1,5 +1,5 @@
 <?php
-class epay_epic_payment_api {
+class EpayPaymentApi {
 
     private $epay_apikey;
     private $epay_pos;
@@ -28,7 +28,7 @@ class epay_epic_payment_api {
             "notificationUrl" => $params->callbackurl,
             "successUrl" => $params->accepturl,
             "failureUrl" => $params->cancelurl,
-            "attributes" => array("wcorderid" => $params->orderid)
+            "attributes" => array("wcorderid" => $params->wcorderid)
         );
 
         if(isset($params->minimumuserage) && $params->minimumuserage > 0)
@@ -96,7 +96,6 @@ class epay_epic_payment_api {
             "amount" => $amount
         );
 
-        // $endpoint_URL = $this->base_url."/public/api/v1/transactions/".$transactionId."/captures/{operationId}/refund";
         $endpoint_URL = $this->base_url."/public/api/v1/transactions/".$transactionId."/refund";
 
         $result = $this->post($endpoint_URL, $ePayParameters);
@@ -117,7 +116,7 @@ class epay_epic_payment_api {
         return $result;
     }
 
-    public function delete_subscription($subscription_id)
+    public function delete_subscription($subscription_id): bool
     {
         $endpoint_URL = $this->base_url."/public/api/v1/subscriptions/".$subscription_id;
         
@@ -162,8 +161,8 @@ class epay_epic_payment_api {
                     $voidedamount += $operation->amount;
                 }
 
-                $minorunits    = Epay_EPIC_Payment_Helper::get_currency_minorunits( $data->transaction->currency );
-                $amount_formatted = Epay_EPIC_Payment_Helper::convert_price_from_minorunits( $operation->amount, $minorunits );
+                $minorunits    = EpayPaymentHelper::get_currency_minorunits( $data->transaction->currency );
+                $amount_formatted = EpayPaymentHelper::convert_price_from_minorunits( $operation->amount, $minorunits );
                 
                 $data->history->TransactionHistoryInfo[] = (object) ["created"=>$operation->createdAt, "username"=>"User", "eventMsg"=> $operation->type." - ".$operation->state." - ".$amount_formatted." ".$data->transaction->currency];
             }
@@ -182,7 +181,7 @@ class epay_epic_payment_api {
                 $data->status = "PAYMENT_CAPTURED";
             }
 
-            $data->currency = Epay_EPIC_Payment_Helper::get_iso_code($data->transaction->currency, true);
+            $data->currency = EpayPaymentHelper::get_iso_code($data->transaction->currency, true);
             $data->cardtypeid = $this->cardtypename_to_cardtypeid($data->transaction->paymentMethodSubType);
             $data->transactionid = $data->transaction->id;
             
@@ -193,38 +192,6 @@ class epay_epic_payment_api {
         return json_encode($data);
     }
 
-    /*
-    private function post($endpoint_URL, array $data)
-    {
-        $jsonData = json_encode($data);
-
-        $ch = curl_init($endpoint_URL);
-
-        curl_setopt($ch, CURLOPT_HTTPHEADER, array(
-            'Content-Type: application/json', 
-            'Authorization: Bearer ' . $this->epay_apikey,
-            'Content-Length: ' . strlen($jsonData)
-        ));
-
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, $jsonData);
-
-        $result = curl_exec($ch);
-        $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-
-        if($http_code == "200")
-        {
-            return $result;
-        }
-        else
-        {
-            return $result;
-        }
-    }
-    */
-
     private function post($endpoint_URL, array $data)
     {
         $response = wp_remote_post($endpoint_URL, array(
@@ -233,11 +200,10 @@ class epay_epic_payment_api {
                 'Authorization' => 'Bearer ' . $this->epay_apikey,
             ),
             'body'    => wp_json_encode($data),
-            'timeout' => 15, // valgfrit
+            'timeout' => 15,
         ));
 
         if (is_wp_error($response)) {
-            // Du kan vælge at logge fejlbeskeden eller returnere den
             return $response->get_error_message();
         }
 
@@ -251,35 +217,6 @@ class epay_epic_payment_api {
         }
     }
     
-    /*
-    private function get($endpoint_URL)
-    {
-        $ch = curl_init($endpoint_URL);
-
-        curl_setopt($ch, CURLOPT_HTTPHEADER, array(
-            'Content-Type: application/json', 
-            'Authorization: Bearer ' . $this->epay_apikey
-        ));
-
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        
-        $result = curl_exec($ch);
-        $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-
-        if($http_code == "200")
-        {
-            return $result;
-        }
-        else
-        {
-            // return false;
-            return $result;
-        }
-
-    }
-    */
-
     private function get($endpoint_URL)
     {
         $response = wp_remote_get($endpoint_URL, array(
@@ -287,7 +224,7 @@ class epay_epic_payment_api {
                 'Content-Type'  => 'application/json',
                 'Authorization' => 'Bearer ' . $this->epay_apikey,
             ),
-            'timeout' => 15, // valgfrit
+            'timeout' => 15,
         ));
 
         if (is_wp_error($response)) {
@@ -303,6 +240,37 @@ class epay_epic_payment_api {
             // return false;
             return $body;
         }
+    }
+
+    private function delete( $endpoint_URL, array $data = [] ):bool
+    {
+        $args = [
+            'method'  => 'DELETE',
+            'headers' => [
+                'Content-Type'  => 'application/json',
+                'Authorization' => 'Bearer ' . $this->epay_apikey,
+            ],
+            'timeout' => 15,
+        ];
+
+        if ( ! empty( $data ) ) {
+            $args['body'] = wp_json_encode( $data );
+        }
+
+        $response = wp_remote_request( $endpoint_URL, $args );
+
+        if ( is_wp_error( $response ) ) {
+            return $response->get_error_message();
+        }
+
+        $http_code = wp_remote_retrieve_response_code( $response );
+        $body      = wp_remote_retrieve_body( $response );
+
+        if ( in_array( $http_code, [ 200, 202, 204 ], true ) ) {
+            return true;
+        }
+
+        return false;
     }
 
     private function cardtypename_to_cardtypeid($cardtypename)

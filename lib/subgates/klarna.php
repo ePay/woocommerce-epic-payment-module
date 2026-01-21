@@ -1,16 +1,16 @@
 <?php
-class Epay_EPIC_Klarna extends epic_subgate
+class EpayPaymentKlarna extends EpayPaymentSubgate
 {
     public function __construct()
     {
         parent::__construct();
 
-        $this->id = "epay_epic_klarna";
+        $this->id = "epaypayment_klarna";
         $this->paymenttype = 17;
 		$this->icon = $this->plugin_url('images/klarna.svg');
         // $this->enabled = "yes";
         
-        $this->method_title = "ePay EPIC - Klarna";
+        $this->method_title = "ePay Payment - Klarna";
 
         $this->setup();
 

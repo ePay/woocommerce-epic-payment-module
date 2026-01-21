@@ -18,6 +18,14 @@ final class Epay_EPIC_Payment_Blocks extends AbstractPaymentMethodType {
     }
 
     public function initialize() {
+
+        // echo "initialize"; 
+
+        // $epayHandler = new EpayPaymentApi("test_3ef44f6a-2e4b-4a61-80b5-bab8fa005195", "01935342-783e-791d-b757-c83698747d28");
+        // $result = $epayHandler->createPaymentRequest(json_encode(array("orderid"=>null, "amount"=>39995, "currency"=>"DKK", "instant"=>"OFF", "accepturl"=>"https://mmn-dev.sprex.dk/temp/epay/hosted/?success", "cancelurl"=>"https://mmn-dev.sprex.dk/temp/epay/hosted/?failure", "callbackurl"=>"https://mmn-dev.sprex.dk/temp/epay/hosted/?notification")));
+
+        // $this->createPaymentRequestLink;
+
         // $this->settings = get_option( 'woocommerce_my_custom_gateway_settings', [] );
         // $this->gateway = new Epay_EPIC_Payment();
     }
@@ -32,13 +40,14 @@ final class Epay_EPIC_Payment_Blocks extends AbstractPaymentMethodType {
             'epay_epic_payment-blocks-integration',
             plugin_dir_url(__FILE__) . 'scripts/checkout.js',
             [
-                'wc-blocks-registry',
-                'wc-settings',
+                // 'wc-blocks-checkout',
                 'wp-element',
-                'wp-html-entities',
-                'wp-i18n',
+                'wc-blocks-registry',
+                // 'wc-settings',
+                // 'wp-html-entities',
+                // 'wp-i18n',
             ],
-            1,
+            '1.0.0',
             true
         );
         if( function_exists( 'wp_set_script_translations' ) ) {

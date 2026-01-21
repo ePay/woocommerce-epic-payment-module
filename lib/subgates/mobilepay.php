@@ -1,16 +1,16 @@
 <?php
-class Epay_EPIC_MobilePay extends epic_subgate
+class EpayPaymentMobilePay extends EpayPaymentSubgate
 {
     public function __construct()
     {
         parent::__construct();
 
-        $this->id = "epay_epic_mobilepay";
+        $this->id = "epaypayment_mobilepay";
         $this->paymenttype = 29;
 		$this->icon = $this->plugin_url('images/mobilepay.svg');
         // $this->enabled = "yes";
         
-        $this->method_title = "ePay EPIC - MobilePay";
+        $this->method_title = "ePay Payment - MobilePay";
 
         $this->setup();
 

@@ -1,17 +1,17 @@
 <?php
-class Epay_EPIC_ViaBill extends epic_subgate
+class EpayPaymentViaBill extends EpayPaymentSubgate
 {
     public function __construct()
     {
         parent::__construct();
 
-        $this->id = "epay_epic_viabill";
+        $this->id = "epaypayment_viabill";
         $this->paymentcollection = 7;
         $this->paymenttype = 23;
 		$this->icon = $this->plugin_url('images/viabill.svg');
         // $this->enabled = "yes";
         
-        $this->method_title = "ePay EPIC - ViaBill";
+        $this->method_title = "ePay Payment- ViaBill";
 
         $this->setup();
 

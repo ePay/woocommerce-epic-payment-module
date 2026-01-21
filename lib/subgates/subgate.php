@@ -1,5 +1,5 @@
 <?php
-class epic_subgate extends Epay_EPIC_Payment {
+class EpayPaymentSubgate extends EpayPayment {
 
     public $main_settings = null;
 

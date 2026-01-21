@@ -1,16 +1,16 @@
 <?php
-class Epay_EPIC_iDEAL extends epic_subgate
+class EpayPaymentIdeal extends EpayPaymentSubgate
 {
     public function __construct()
     {
         parent::__construct();
 
-        $this->id = "epay_epic_ideal";
+        $this->id = "epaypayment_ideal";
         $this->paymenttype = 25;
 		$this->icon = $this->plugin_url('images/ideal.svg');
         // $this->enabled = "yes";
         
-        $this->method_title = "ePay EPIC - iDEAL";
+        $this->method_title = "ePay Payment - iDEAL";
 
         $this->setup();
 
